@@ -18,11 +18,14 @@ class SkillSerializer(serializers.ModelSerializer):
 
 
 class StudentSkillSerializer(serializers.ModelSerializer):
-    skill = SkillSerializer()
+    # Read-only nested skill data for output
+    skill = SkillSerializer(read_only=True)
+    # Write-only input used by MySkillViewSet.perform_create
+    skill_name = serializers.CharField(write_only=True, required=False, allow_blank=False)
 
     class Meta:
         model = StudentSkill
-        fields = ["id", "skill", "level", "endorsement_count"]
+        fields = ["id", "skill", "skill_name", "level", "endorsement_count"]
 
 
 class ExperienceSerializer(serializers.ModelSerializer):

@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, mixins, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 
 from .models import (
     Endorsement,
@@ -68,6 +69,8 @@ class MySkillViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         skill_name = self.request.data.get("skill_name")
+        if not skill_name:
+            raise ValidationError({"skill_name": "Skill wajib diisi."})
         level = self.request.data.get("level", StudentSkill.Level.BEGINNER)
         skill, _ = Skill.objects.get_or_create(name=skill_name)
         serializer.save(student=self.request.user.profile, skill=skill, level=level)
