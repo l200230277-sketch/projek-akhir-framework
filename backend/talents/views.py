@@ -1,9 +1,9 @@
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, mixins, permissions, viewsets
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 
 from .models import (
@@ -59,7 +59,7 @@ class MySkillViewSet(viewsets.ModelViewSet):
     CRUD skill milik mahasiswa yang sedang login.
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsOwnerProfile]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = StudentSkillSerializer
 
     def get_queryset(self):
@@ -69,15 +69,23 @@ class MySkillViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         skill_name = self.request.data.get("skill_name")
-        if not skill_name:
+        if not skill_name or not skill_name.strip():
             raise ValidationError({"skill_name": "Skill wajib diisi."})
+        skill_name = skill_name.strip()
         level = self.request.data.get("level", StudentSkill.Level.BEGINNER)
         skill, _ = Skill.objects.get_or_create(name=skill_name)
+        # Check if student already has this skill
+        existing = StudentSkill.objects.filter(
+            student=self.request.user.profile,
+            skill=skill
+        ).first()
+        if existing:
+            raise ValidationError({"skill_name": "Skill ini sudah ada di profil Anda."})
         serializer.save(student=self.request.user.profile, skill=skill, level=level)
 
 
 class MyExperienceViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated, IsOwnerProfile]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ExperienceSerializer
 
     def get_queryset(self):
@@ -136,11 +144,12 @@ class PublicTalentListView(generics.ListAPIView):
                 Q(user__full_name__icontains=search)
                 | Q(nim__icontains=search)
                 | Q(prodi__icontains=search)
+                | Q(student_skills__skill__name__icontains=search)
             )
         if prodi:
             qs = qs.filter(prodi__iexact=prodi)
         if skill_name:
-            qs = qs.filter(student_skills__skill__name__iexact=skill_name)
+            qs = qs.filter(student_skills__skill__name__icontains=skill_name)
         return qs.distinct()
 
 
@@ -193,6 +202,43 @@ class AdminTalentViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
         profile.is_active = True
         profile.save(update_fields=["is_active"])
         return Response({"status": "activated"})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def statistics_view(request):
+    """
+    Endpoint untuk mendapatkan statistik publik.
+    """
+    total_talents = StudentProfile.objects.filter(is_public=True, is_active=True).count()
+    total_skills = StudentSkill.objects.filter(student__is_public=True, student__is_active=True).values('skill').distinct().count()
+    total_experiences = Experience.objects.filter(student__is_public=True, student__is_active=True).count()
+    
+    return Response({
+        'total_talents': total_talents,
+        'total_skills': total_skills,
+        'total_experiences': total_experiences,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def top_talents_view(request):
+    """
+    Endpoint untuk mendapatkan top 2 talents dengan skill dan experience terbanyak.
+    """
+    talents = (
+        StudentProfile.objects
+        .filter(is_public=True, is_active=True)
+        .annotate(
+            skill_count=Count('student_skills'),
+            experience_count=Count('experiences')
+        )
+        .order_by('-skill_count', '-experience_count')[:2]
+    )
+    
+    serializer = StudentProfileSerializer(talents, many=True)
+    return Response(serializer.data)
 
 
 

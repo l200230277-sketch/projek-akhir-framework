@@ -11,6 +11,8 @@ from .views import (
     MySocialLinkViewSet,
     PublicTalentListView,
     TalentDetailView,
+    statistics_view,
+    top_talents_view,
 )
 
 router = DefaultRouter()
@@ -24,6 +26,8 @@ urlpatterns = [
     path("me/profile/", MyProfileView.as_view(), name="my-profile"),
     path("public/", PublicTalentListView.as_view(), name="public-talents"),
     path("latest/", LatestTalentListView.as_view(), name="latest-talents"),
+    path("statistics/", statistics_view, name="statistics"),
+    path("top-talents/", top_talents_view, name="top-talents"),
     path("<int:pk>/", TalentDetailView.as_view(), name="talent-detail"),
     path("", include(router.urls)),
 ]

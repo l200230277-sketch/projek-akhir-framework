@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { theme } from "../theme";
 
@@ -17,6 +18,7 @@ type Talent = {
 };
 
 export function TalentsList() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [skill, setSkill] = useState("");
   const [items, setItems] = useState<Talent[]>([]);
@@ -98,7 +100,11 @@ export function TalentsList() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {items.map((t) => (
-                <div key={t.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                <div
+                  key={t.id}
+                  onClick={() => navigate(`/profile/${t.id}`)}
+                  className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="text-base font-semibold text-gray-900">

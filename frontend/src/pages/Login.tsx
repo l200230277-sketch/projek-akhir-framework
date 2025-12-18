@@ -22,7 +22,8 @@ export function Login() {
       const { access, refresh } = res.data;
       localStorage.setItem("accessToken", access);
       localStorage.setItem("refreshToken", refresh);
-      navigate("/dashboard");
+      // Redirect to dashboard immediately
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error(err);
       setError("Email atau password salah.");

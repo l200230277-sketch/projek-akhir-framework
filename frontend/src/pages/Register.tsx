@@ -21,40 +21,126 @@ export function Register() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    let processedValue = value;
+    
+    // Client-side validation
+    if (name === "full_name") {
+      // Only letters, spaces, dots, commas, hyphens, apostrophes
+      processedValue = value.replace(/[^a-zA-Z\s\.\,\-\']/g, "");
+    } else if (name === "nim") {
+      // Only digits, max 10 characters
+      processedValue = value.replace(/\D/g, "").slice(0, 10);
+    } else if (name === "angkatan") {
+      // Only digits, max 4 characters
+      processedValue = value.replace(/\D/g, "").slice(0, 4);
+    } else if (name === "prodi") {
+      // Only letters, spaces, and some punctuation
+      processedValue = value.replace(/[^a-zA-Z\s\.\,\-\(\)]/g, "");
+    }
+    
+    setForm((prev) => ({ ...prev, [name]: processedValue }));
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    
+    // Client-side validation
+    const errors: string[] = [];
+    
+    if (!form.full_name.trim()) {
+      errors.push("Nama lengkap wajib diisi");
+    } else if (!/^[a-zA-Z\s\.\,\-\']+$/.test(form.full_name)) {
+      errors.push("Nama hanya boleh berisi huruf, spasi, dan tanda baca");
+    }
+    
+    if (!form.nim.trim()) {
+      errors.push("NIM wajib diisi");
+    } else if (form.nim.length > 10) {
+      errors.push("NIM maksimal 10 karakter");
+    } else if (!/^\d+$/.test(form.nim)) {
+      errors.push("NIM hanya boleh berisi angka");
+    }
+    
+    if (!form.angkatan.trim()) {
+      errors.push("Angkatan wajib diisi");
+    } else if (form.angkatan.length !== 4) {
+      errors.push("Angkatan harus 4 digit");
+    } else if (!/^\d+$/.test(form.angkatan)) {
+      errors.push("Angkatan hanya boleh berisi angka");
+    }
+    
+    if (!form.prodi.trim()) {
+      errors.push("Program studi wajib diisi");
+    } else if (!/^[a-zA-Z\s\.\,\-\(\)]+$/.test(form.prodi)) {
+      errors.push("Program studi hanya boleh berisi huruf dan tanda baca");
+    }
+    
+    if (!form.email.trim()) {
+      errors.push("Email wajib diisi");
+    } else if (!/^[a-zA-Z0-9]+@student\.ums\.ac\.id$/.test(form.email)) {
+      errors.push("Email harus menggunakan format: nim@student.ums.ac.id");
+    } else {
+      // Validate NIM matches email
+      const emailNim = form.email.split("@")[0];
+      if (emailNim !== form.nim) {
+        errors.push("NIM di email harus sama dengan NIM yang diinput");
+      }
+    }
+    
+    if (!form.password) {
+      errors.push("Password wajib diisi");
+    }
+    
+    if (errors.length > 0) {
+      setError(errors.join(". "));
+      return;
+    }
+    
     try {
       await axios.post(`${API_BASE_URL}/api/accounts/auth/register/`, form);
-      navigate("/login");
+      // Auto login after registration
+      try {
+        const loginRes = await axios.post(`${API_BASE_URL}/api/accounts/auth/login/`, {
+          email: form.email,
+          password: form.password
+        });
+        const { access, refresh } = loginRes.data;
+        localStorage.setItem("accessToken", access);
+        localStorage.setItem("refreshToken", refresh);
+        navigate("/dashboard");
+      } catch (loginErr) {
+        navigate("/login");
+      }
     } catch (err: any) {
       console.error(err);
       // Tampilkan error message yang lebih detail dari backend
       if (err.response?.data) {
         const errorData = err.response.data;
-        if (errorData.password) {
-          // Jika error password validation, tampilkan detailnya
-          const passwordErrors = Array.isArray(errorData.password) 
-            ? errorData.password.join(", ") 
-            : errorData.password;
-          setError(`Password: ${passwordErrors}`);
-        } else if (errorData.email) {
-          setError(`Email: ${Array.isArray(errorData.email) ? errorData.email.join(", ") : errorData.email}`);
-        } else if (errorData.non_field_errors) {
-          setError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors.join(", ") : errorData.non_field_errors);
-        } else {
-          // Tampilkan semua error yang ada
-          const errorMessages = Object.entries(errorData)
-            .map(([key, value]: [string, any]) => {
-              const messages = Array.isArray(value) ? value.join(", ") : value;
-              return `${key}: ${messages}`;
-            })
-            .join("; ");
-          setError(errorMessages || "Gagal mendaftar, periksa kembali data Anda.");
-        }
+        const errorMessages: string[] = [];
+        
+        // Format errors clearly
+        Object.entries(errorData).forEach(([key, value]: [string, any]) => {
+          const messages = Array.isArray(value) ? value.join(", ") : String(value);
+          // Translate field names to Indonesian
+          const fieldNames: { [key: string]: string } = {
+            full_name: "Nama lengkap",
+            email: "Email",
+            password: "Password",
+            nim: "NIM",
+            prodi: "Program studi",
+            angkatan: "Angkatan",
+            non_field_errors: ""
+          };
+          const fieldName = fieldNames[key] || key;
+          if (fieldName) {
+            errorMessages.push(`${fieldName}: ${messages}`);
+          } else {
+            errorMessages.push(messages);
+          }
+        });
+        
+        setError(errorMessages.length > 0 ? errorMessages.join(". ") : "Gagal mendaftar, periksa kembali data Anda.");
       } else {
         setError("Gagal mendaftar, periksa kembali data Anda.");
       }
@@ -99,6 +185,7 @@ export function Register() {
               value={form.nim}
               onChange={handleChange}
               required
+              maxLength={10}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </div>
@@ -124,6 +211,7 @@ export function Register() {
               onChange={handleChange}
               placeholder="2022"
               required
+              maxLength={4}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </div>
