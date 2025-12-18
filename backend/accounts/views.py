@@ -3,6 +3,7 @@ from rest_framework import generics, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import RegisterSerializer, UserSerializer
+from .token_serializers import EmailLowercaseTokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -30,9 +31,10 @@ class MeView(generics.RetrieveAPIView):
 class LoginView(TokenObtainPairView):
     """
     Wrapper supaya URL login lebih konsisten di namespace accounts.
+    Menggunakan serializer kustom yang menormalisasi email ke lowercase.
     """
 
-    pass
+    serializer_class = EmailLowercaseTokenObtainPairSerializer
 
 
 

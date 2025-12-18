@@ -23,6 +23,7 @@ export function Login() {
       const { access, refresh } = res.data;
       localStorage.setItem("accessToken", access);
       localStorage.setItem("refreshToken", refresh);
+      window.dispatchEvent(new Event("authChanged"));
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
