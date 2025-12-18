@@ -1,6 +1,7 @@
 import re
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
 from talents.models import StudentProfile
@@ -76,7 +77,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         pattern = r"^[a-zA-Z0-9]+@student\.ums\.ac\.id$"
         if not re.match(pattern, value):
             raise serializers.ValidationError("Email harus menggunakan format: nim@student.ums.ac.id")
-        return value.strip().lower()
+        email_normalized = value.strip().lower()
+        # Cegah email yang sudah terdaftar
+        if User.objects.filter(email__iexact=email_normalized).exists():
+            raise serializers.ValidationError("Email ini sudah terdaftar.")
+        return email_normalized
 
     def validate_password(self, value: str) -> str:
         validate_password(value)
@@ -93,26 +98,38 @@ class RegisterSerializer(serializers.ModelSerializer):
                     'email': 'NIM di email harus sama dengan NIM yang diinput.',
                     'nim': 'NIM di email harus sama dengan NIM yang diinput.'
                 })
+        # Pastikan NIM unik di StudentProfile
+        if nim and StudentProfile.objects.filter(nim=nim.upper()).exists():
+            raise serializers.ValidationError({
+                'nim': 'NIM ini sudah terdaftar.'
+            })
         return attrs
 
     def create(self, validated_data):
-        nim = validated_data.pop("nim")
+        nim = validated_data.pop("nim").upper()
         prodi = validated_data.pop("prodi")
         angkatan = validated_data.pop("angkatan")
         password = validated_data.pop("password")
-        email = validated_data.pop("email")
-        
-        # Set username sama dengan email karena USERNAME_FIELD = "email"
-        user = User(username=email, email=email, **validated_data)
-        user.set_password(password)
-        user.save()
+        email = validated_data.pop("email").lower()
 
-        StudentProfile.objects.create(
-            user=user,
-            nim=nim,
-            prodi=prodi,
-            angkatan=angkatan,
-        )
-        return user
+        try:
+            with transaction.atomic():
+                # Set username sama dengan email karena USERNAME_FIELD = "email"
+                user = User(username=email, email=email, **validated_data)
+                user.set_password(password)
+                user.save()
+
+                StudentProfile.objects.create(
+                    user=user,
+                    nim=nim,
+                    prodi=prodi,
+                    angkatan=angkatan,
+                )
+                return user
+        except IntegrityError:
+            # Tangani kasus duplikat secara rapi, jangan sampai 500
+            raise serializers.ValidationError(
+                {"detail": "Email atau NIM sudah terdaftar. Silakan gunakan data lain."}
+            )
 
 
