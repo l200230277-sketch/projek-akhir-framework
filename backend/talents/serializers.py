@@ -27,6 +27,14 @@ class StudentSkillSerializer(serializers.ModelSerializer):
         model = StudentSkill
         fields = ["id", "skill", "skill_name", "level", "endorsement_count"]
 
+    def create(self, validated_data):
+        """
+        Hapus field helper `skill_name` sebelum membuat instance model,
+        karena kolom ini tidak ada di model StudentSkill.
+        """
+        validated_data.pop("skill_name", None)
+        return super().create(validated_data)
+
 
 class ExperienceSerializer(serializers.ModelSerializer):
     def validate_start_date(self, value):

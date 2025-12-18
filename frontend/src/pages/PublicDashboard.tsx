@@ -95,45 +95,69 @@ export function PublicDashboard() {
       className="min-h-[calc(100vh-120px)]"
     >
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">
-          Platform Talenta Mahasiswa UMS
-        </h1>
-        <p className="mb-8 text-sm text-gray-700">
-          Jelajahi talenta terbaik mahasiswa UMS dengan berbagai skill dan pengalaman.
-        </p>
-
-        {/* Statistics */}
-        {!showResults && statistics && (
-          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <div className="text-3xl font-bold text-gray-900">
-                {statistics.total_talents}
-              </div>
-              <div className="text-sm text-gray-600">Pendaftar Talenta</div>
-            </div>
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <div className="text-3xl font-bold text-gray-900">
-                {statistics.total_skills}
-              </div>
-              <div className="text-sm text-gray-600">Total Skill</div>
-            </div>
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <div className="text-3xl font-bold text-gray-900">
-                {statistics.total_experiences}
-              </div>
-              <div className="text-sm text-gray-600">Total Pengalaman</div>
-            </div>
+        {/* Hero section */}
+        <section className="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-3">
+            <h1 className="text-3xl font-bold text-gray-900 md:text-4xl">
+              Jelajahi{" "}
+              <span style={{ color: theme.colors.primary }}>Talenta Mahasiswa UMS</span>
+            </h1>
+            <p className="max-w-xl text-sm text-gray-700 md:text-base">
+              Temukan profil, skill, dan pengalaman terbaik mahasiswa Universitas Muhammadiyah
+              Surakarta dalam satu dashboard modern.
+            </p>
           </div>
-        )}
+          {/* Statistics cards horizontal */}
+          {!showResults && statistics && (
+            <div className="grid w-full grid-cols-1 gap-3 md:w-auto md:grid-cols-3">
+              <div
+                style={{ backgroundColor: theme.colors.surface }}
+                className="flex items-center gap-3 rounded-2xl border border-black/5 px-4 py-3 shadow-sm"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                  {/* Ikon orang sederhana */}
+                  <span className="text-lg font-bold">👤</span>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-gray-900">
+                    {statistics.total_talents}
+                  </div>
+                  <div className="text-xs text-gray-600">Pendaftar Talenta</div>
+                </div>
+              </div>
+              <div
+                style={{ backgroundColor: theme.colors.surface }}
+                className="flex items-center gap-3 rounded-2xl border border-black/5 px-4 py-3 shadow-sm"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                  {/* Ikon skill (bintang) */}
+                  <span className="text-lg font-bold">⭐</span>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-gray-900">
+                    {statistics.total_skills}
+                  </div>
+                  <div className="text-xs text-gray-600">Total Skill</div>
+                </div>
+              </div>
+              <div
+                style={{ backgroundColor: theme.colors.surface }}
+                className="flex items-center gap-3 rounded-2xl border border-black/5 px-4 py-3 shadow-sm"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                  {/* Ikon pengalaman (briefcase) */}
+                  <span className="text-lg font-bold">💼</span>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-gray-900">
+                    {statistics.total_experiences}
+                  </div>
+                  <div className="text-xs text-gray-600">Total Pengalaman</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Search Bar */}
         <div className="mb-6">
@@ -146,7 +170,7 @@ export function PublicDashboard() {
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
             {searchLoading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                 Memuat...
               </div>
             )}
@@ -246,4 +270,5 @@ export function PublicDashboard() {
     </main>
   );
 }
+
 

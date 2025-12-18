@@ -67,18 +67,18 @@ export function TalentsList() {
               skill, atau program studi.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
             <input
               placeholder="Cari nama / NIM / prodi..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="min-w-[220px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="min-w-[220px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
             <input
               placeholder="Filter skill (mis. React, Django)"
               value={skill}
               onChange={(e) => setSkill(e.target.value)}
-              className="min-w-[200px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="min-w-[200px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </div>
         </div>

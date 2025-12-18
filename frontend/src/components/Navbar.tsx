@@ -1,27 +1,50 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { theme } from "../theme";
 import logo from "../assets/logo-ums.png";
 import { useEffect, useState } from "react";
+import axios from "axios";
 
 const navLinkClass =
   "px-3 py-1 rounded-full text-sm font-medium hover:bg-white/20 transition-colors";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+
 export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     setIsLoggedIn(!!token);
+
+    // Jika ada token saat pertama kali buka, cek ke backend apakah masih valid.
+    async function verifyToken(currentToken: string | null) {
+      if (!currentToken) return;
+      try {
+        await axios.get(`${API_BASE_URL}/api/accounts/me/`, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+        // Jika sukses, biarkan isLoggedIn = true
+      } catch (error) {
+        // Jika token tidak valid / kadaluarsa, hapus dan anggap belum login
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        setIsLoggedIn(false);
+      }
+    }
+
+    verifyToken(token);
     
     // Listen for storage changes (e.g., logout from another tab)
     const handleStorageChange = () => {
       const newToken = localStorage.getItem("accessToken");
       setIsLoggedIn(!!newToken);
+      // Optional: bisa juga verifikasi lagi jika perlu, tapi cukup update status saja.
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [location.pathname]);
 
   function handleLogout() {
     localStorage.removeItem("accessToken");

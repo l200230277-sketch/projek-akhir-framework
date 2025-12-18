@@ -43,11 +43,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_nim(self, value: str) -> str:
         if not value.strip():
             raise serializers.ValidationError("NIM wajib diisi.")
-        value = value.strip()
-        if len(value) > 10:
-            raise serializers.ValidationError("NIM maksimal 10 karakter.")
-        if not value.isdigit():
-            raise serializers.ValidationError("NIM hanya boleh berisi angka.")
+        value = value.strip().upper()
+        # Format: 1 huruf A-Z di depan + 9 angka (total 10 karakter), contoh: L200230277
+        import re
+        if not re.match(r"^[A-Z][0-9]{9}$", value):
+            raise serializers.ValidationError(
+                "Format NIM harus 1 huruf diikuti 9 angka, contoh: L200230277."
+            )
         return value
 
     def validate_angkatan(self, value: str) -> str:
@@ -70,11 +72,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value: str) -> str:
         if not value.strip():
             raise serializers.ValidationError("Email wajib diisi.")
-        # Format: nim@student.ums.ac.id
-        pattern = r'^[a-zA-Z0-9]+@student\.ums\.ac\.id$'
+        # Format: nim@student.ums.ac.id (nim boleh huruf+angka, contoh L200230277)
+        pattern = r"^[a-zA-Z0-9]+@student\.ums\.ac\.id$"
         if not re.match(pattern, value):
             raise serializers.ValidationError("Email harus menggunakan format: nim@student.ums.ac.id")
-        return value.strip()
+        return value.strip().lower()
 
     def validate_password(self, value: str) -> str:
         validate_password(value)
@@ -85,8 +87,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         email = attrs.get('email', '')
         nim = attrs.get('nim', '')
         if email and nim:
-            email_nim = email.split('@')[0]
-            if email_nim != nim:
+            email_nim = email.split('@')[0].upper()
+            if email_nim != nim.upper():
                 raise serializers.ValidationError({
                     'email': 'NIM di email harus sama dengan NIM yang diinput.',
                     'nim': 'NIM di email harus sama dengan NIM yang diinput.'

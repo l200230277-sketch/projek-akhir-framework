@@ -79,6 +79,7 @@ export function Dashboard() {
   const [expEndDate, setExpEndDate] = useState("");
   const [expDescription, setExpDescription] = useState("");
   const [expError, setExpError] = useState<string | null>(null);
+  const [stats, setStats] = useState<{ talents: number; skills: number; experiences: number } | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -86,6 +87,7 @@ export function Dashboard() {
       return;
     }
     fetchProfile();
+    fetchMyStats();
     fetchTopTalents();
   }, [navigate, token]);
 
@@ -124,6 +126,24 @@ export function Dashboard() {
       setTopTalents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Error fetching top talents:", err);
+    }
+  }
+
+  async function fetchMyStats() {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/talents/statistics/`);
+      const data = res.data as {
+        total_talents: number;
+        total_skills: number;
+        total_experiences: number;
+      };
+      setStats({
+        talents: data.total_talents,
+        skills: data.total_skills,
+        experiences: data.total_experiences,
+      });
+    } catch (err) {
+      console.error("Error fetching statistics:", err);
     }
   }
 
@@ -213,17 +233,30 @@ export function Dashboard() {
       await fetchProfile();
     } catch (err: any) {
       console.error(err);
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        const errorMsg = Object.entries(errorData)
+      const resp = err?.response;
+      const data = resp?.data;
+      const contentType: string | undefined = resp?.headers?.["content-type"];
+
+      // Jika backend mengirim JSON error yang rapi
+      if (
+        data &&
+        typeof data === "object" &&
+        !Array.isArray(data) &&
+        contentType &&
+        contentType.includes("application/json")
+      ) {
+        const errorMsg = Object.entries(data)
           .map(([key, value]: [string, any]) => {
-            const messages = Array.isArray(value) ? value.join(", ") : value;
+            const messages = Array.isArray(value) ? value.join(", ") : String(value);
             return `${key}: ${messages}`;
           })
           .join("; ");
         setSkillError(errorMsg || "Gagal menambah skill.");
       } else {
-        setSkillError("Gagal menambah skill.");
+        // Fallback jika respons berupa HTML / blob (misalnya error 500)
+        setSkillError(
+          "Terjadi kesalahan saat menambah skill. Silakan coba lagi atau hubungi admin."
+        );
       }
     }
   }
@@ -346,10 +379,55 @@ export function Dashboard() {
       className="min-h-[calc(100vh-120px)]"
     >
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">Dashboard Mahasiswa</h1>
-        <p className="mb-6 text-sm text-gray-700">
-          Kelola profil, skill, dan pengalaman Anda di sini.
-        </p>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="mb-1 text-2xl font-bold text-gray-900">Dashboard Mahasiswa</h1>
+            <p className="text-sm text-gray-700">
+              Kelola profil, skill, dan pengalaman Anda, serta jelajahi talenta lain.
+            </p>
+          </div>
+          {/* Stats cards for current user / global */}
+          {stats && (
+            <div className="grid w-full grid-cols-3 gap-3 md:w-auto">
+              <div
+                style={{ backgroundColor: theme.colors.surface }}
+                className="flex items-center gap-2 rounded-2xl border border-black/5 px-3 py-2 text-xs shadow-sm"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-base">
+                  👤
+                </span>
+                <div>
+                  <div className="font-semibold text-gray-900">{stats.talents}</div>
+                  <div className="text-[11px] text-gray-600">Talenta</div>
+                </div>
+              </div>
+              <div
+                style={{ backgroundColor: theme.colors.surface }}
+                className="flex items-center gap-2 rounded-2xl border border-black/5 px-3 py-2 text-xs shadow-sm"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-base">
+                  ⭐
+                </span>
+                <div>
+                  <div className="font-semibold text-gray-900">{stats.skills}</div>
+                  <div className="text-[11px] text-gray-600">Skill</div>
+                </div>
+              </div>
+              <div
+                style={{ backgroundColor: theme.colors.surface }}
+                className="flex items-center gap-2 rounded-2xl border border-black/5 px-3 py-2 text-xs shadow-sm"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-base">
+                  💼
+                </span>
+                <div>
+                  <div className="font-semibold text-gray-900">{stats.experiences}</div>
+                  <div className="text-[11px] text-gray-600">Pengalaman</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Search Bar */}
         <div className="mb-6">

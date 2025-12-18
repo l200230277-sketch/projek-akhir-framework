@@ -22,14 +22,15 @@ export function Register() {
   ) {
     const { name, value } = e.target;
     let processedValue = value;
-    
+
     // Client-side validation
     if (name === "full_name") {
       // Only letters, spaces, dots, commas, hyphens, apostrophes
       processedValue = value.replace(/[^a-zA-Z\s\.\,\-\']/g, "");
     } else if (name === "nim") {
-      // Only digits, max 10 characters
-      processedValue = value.replace(/\D/g, "").slice(0, 10);
+      // Format: 1 huruf A-Z di depan + 9 angka (total 10 karakter)
+      // Izinkan user mengetik bebas lalu kita normalisasi ke uppercase dan batasi panjang
+      processedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
     } else if (name === "angkatan") {
       // Only digits, max 4 characters
       processedValue = value.replace(/\D/g, "").slice(0, 4);
@@ -56,10 +57,8 @@ export function Register() {
     
     if (!form.nim.trim()) {
       errors.push("NIM wajib diisi");
-    } else if (form.nim.length > 10) {
-      errors.push("NIM maksimal 10 karakter");
-    } else if (!/^\d+$/.test(form.nim)) {
-      errors.push("NIM hanya boleh berisi angka");
+    } else if (!/^[A-Z][0-9]{9}$/.test(form.nim.trim().toUpperCase())) {
+      errors.push("Format NIM harus 1 huruf diikuti 9 angka, contoh: L200230277");
     }
     
     if (!form.angkatan.trim()) {
@@ -78,12 +77,12 @@ export function Register() {
     
     if (!form.email.trim()) {
       errors.push("Email wajib diisi");
-    } else if (!/^[a-zA-Z0-9]+@student\.ums\.ac\.id$/.test(form.email)) {
+    } else if (!/^[a-zA-Z0-9]+@student\.ums\.ac\.id$/.test(form.email.toLowerCase())) {
       errors.push("Email harus menggunakan format: nim@student.ums.ac.id");
     } else {
       // Validate NIM matches email
-      const emailNim = form.email.split("@")[0];
-      if (emailNim !== form.nim) {
+      const emailNim = form.email.split("@")[0].toUpperCase();
+      if (emailNim !== form.nim.trim().toUpperCase()) {
         errors.push("NIM di email harus sama dengan NIM yang diinput");
       }
     }

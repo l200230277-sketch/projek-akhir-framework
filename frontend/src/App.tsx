@@ -17,14 +17,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-  if (token) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <>{children}</>;
-}
-
 function App() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -32,8 +24,8 @@ function App() {
       <div className="flex-1">
         <Routes>
           <Route path="/" element={<PublicDashboard />} />
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/talents" element={<TalentsList />} />
           <Route path="/profile/:id" element={<ProfileDetail />} />
