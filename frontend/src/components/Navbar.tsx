@@ -11,22 +11,31 @@ export function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    setIsLoggedIn(!!token);
-
-    const handleStorageChange = () => {
-      const newToken = localStorage.getItem("accessToken");
-      setIsLoggedIn(!!newToken);
+    const updateLoginState = () => {
+      const token = localStorage.getItem("accessToken");
+      setIsLoggedIn(!!token);
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    // Set state saat pertama kali mount
+    updateLoginState();
+
+    // Dengarkan event custom ketika status auth berubah di tab yang sama
+    window.addEventListener("authChanged", updateLoginState);
+
+    // Tetap dengarkan event storage untuk perubahan dari tab lain
+    window.addEventListener("storage", updateLoginState);
+
+    return () => {
+      window.removeEventListener("authChanged", updateLoginState);
+      window.removeEventListener("storage", updateLoginState);
+    };
   }, []);
 
   function handleLogout() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setIsLoggedIn(false);
+    window.dispatchEvent(new Event("authChanged"));
     navigate("/");
   }
 
