@@ -3,7 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { theme } from "../theme";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+
 
 interface Profile {
   id: number;
@@ -12,17 +14,21 @@ interface Profile {
   nim: string;
   prodi: string;
   angkatan: string;
-  headline: string;
-  bio: string;
+  headline?: string;
+  bio?: string;
   photo: string | null;
-  skills: { id: number; skill: { id: number; name: string }; level: string }[];
+  skills: {
+    id: number;
+    skill: { id: number; name: string };
+    level: string;
+  }[];
   experiences: {
     id: number;
     title: string;
     company: string;
     start_date: string;
     end_date: string | null;
-    description: string;
+    description?: string;
   }[];
 }
 
@@ -31,13 +37,9 @@ export function ProfileDetail() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
   useEffect(() => {
-    if (id) {
-      fetchProfile();
-    }
+    if (id) fetchProfile();
   }, [id]);
 
   async function fetchProfile() {
@@ -45,173 +47,112 @@ export function ProfileDetail() {
       const res = await axios.get(`${API_BASE_URL}/api/talents/${id}/`);
       setProfile(res.data);
     } catch (err) {
-      console.error("Error fetching profile:", err);
-      setError("Gagal memuat profil.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function downloadCV() {
+  async function downloadDataDiri() {
     if (!profile) return;
 
-    try {
-      // Dynamically import jsPDF
-      const jsPDF = (await import("jspdf")).default;
-      const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let yPosition = 20;
+    const jsPDF = (await import("jspdf")).default;
+    const doc = new jsPDF();
+    let y = 20;
 
-    // Helper function to add new page if needed
-    function checkNewPage(requiredSpace: number) {
-      if (yPosition + requiredSpace > pageHeight - 20) {
-        doc.addPage();
-        yPosition = 20;
-        return true;
-      }
-      return false;
-    }
+    // Nama
+    doc.setFontSize(18);
+    doc.text(profile.user_full_name, 105, y, { align: "center" });
+    y += 10;
 
-    // Header
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text(profile.user_full_name, pageWidth / 2, yPosition, { align: "center" });
-    yPosition += 10;
+    // Email
+    doc.setFontSize(11);
+    doc.text(profile.email, 105, y, { align: "center" });
+    y += 6;
 
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(profile.email, pageWidth / 2, yPosition, { align: "center" });
-    yPosition += 5;
+    // NIM • Prodi • Angkatan
     doc.text(
       `${profile.nim} • ${profile.prodi} • Angkatan ${profile.angkatan}`,
-      pageWidth / 2,
-      yPosition,
+      105,
+      y,
       { align: "center" }
     );
-    yPosition += 15;
 
-    // Headline
-    if (profile.headline) {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Headline", 20, yPosition);
-      yPosition += 7;
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      const headlineLines = doc.splitTextToSize(profile.headline, pageWidth - 40);
-      doc.text(headlineLines, 20, yPosition);
-      yPosition += headlineLines.length * 5 + 10;
-    }
+    y += 15;
 
-    // Bio
-    if (profile.bio) {
-      checkNewPage(15);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Tentang", 20, yPosition);
-      yPosition += 7;
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      const bioLines = doc.splitTextToSize(profile.bio, pageWidth - 40);
-      doc.text(bioLines, 20, yPosition);
-      yPosition += bioLines.length * 5 + 10;
-    }
+    // Judul Data Diri
+    doc.setFontSize(14);
+    doc.text("Data Diri Mahasiswa", 20, y);
+    y += 8;
 
-    // Skills
-    if (profile.skills && profile.skills.length > 0) {
-      checkNewPage(15);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Skills", 20, yPosition);
-      yPosition += 7;
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      profile.skills.forEach((skill) => {
-        checkNewPage(7);
-        doc.text(
-          `• ${skill.skill.name} (${skill.level})`,
-          25,
-          yPosition
-        );
-        yPosition += 6;
+    // Isi Data Diri
+    doc.setFontSize(11);
+    doc.text(`Nama       : ${profile.user_full_name}`, 20, y); y += 6;
+    doc.text(`Email      : ${profile.email}`, 20, y); y += 6;
+    doc.text(`NIM        : ${profile.nim}`, 20, y); y += 6;
+    doc.text(`Prodi      : ${profile.prodi}`, 20, y); y += 6;
+    doc.text(`Angkatan   : ${profile.angkatan}`, 20, y);
+    y += 10;
+
+    // Keahlian
+    doc.setFontSize(14);
+    doc.text("Keahlian", 20, y);
+    y += 7;
+    doc.setFontSize(11);
+    if (profile.skills.length > 0) {
+      profile.skills.forEach((s) => {
+        doc.text(`• ${s.skill.name} (${s.level})`, 25, y);
+        y += 5;
       });
-      yPosition += 5;
+    } else {
+      doc.text("Belum ada data keahlian.", 25, y);
+      y += 5;
     }
 
-    // Experiences
-    if (profile.experiences && profile.experiences.length > 0) {
-      checkNewPage(15);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Pengalaman", 20, yPosition);
-      yPosition += 7;
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
+    y += 8;
 
+    // Pengalaman
+    doc.setFontSize(14);
+    doc.text("Pengalaman", 20, y);
+    y += 7;
+    doc.setFontSize(11);
+    if (profile.experiences.length > 0) {
       profile.experiences.forEach((exp) => {
-        checkNewPage(25);
-        doc.setFont("helvetica", "bold");
-        doc.text(exp.title, 25, yPosition);
-        yPosition += 6;
-        doc.setFont("helvetica", "normal");
-        doc.text(exp.company, 25, yPosition);
-        yPosition += 6;
-        const startDate = new Date(exp.start_date).toLocaleDateString("id-ID", {
-          year: "numeric",
+        doc.text(exp.title, 25, y);
+        y += 5;
+        doc.text(exp.company, 25, y);
+        y += 5;
+        const start = new Date(exp.start_date).toLocaleDateString("id-ID", {
           month: "long",
+          year: "numeric",
         });
-        const endDate = exp.end_date
+        const end = exp.end_date
           ? new Date(exp.end_date).toLocaleDateString("id-ID", {
-              year: "numeric",
               month: "long",
+              year: "numeric",
             })
           : "Sekarang";
-        doc.text(`${startDate} - ${endDate}`, 25, yPosition);
-        yPosition += 6;
+        // tanggal di baris terpisah di bawah company
+        doc.text(`${start} – ${end}`, 25, y);
+        y += 7;
         if (exp.description) {
-          const descLines = doc.splitTextToSize(exp.description, pageWidth - 50);
-          doc.text(descLines, 25, yPosition);
-          yPosition += descLines.length * 5;
+          const wrapped = doc.splitTextToSize(exp.description, 160);
+          doc.text(wrapped, 25, y);
+          y += wrapped.length * 5;
         }
-        yPosition += 5;
+        y += 4;
       });
+    } else {
+      doc.text("Belum ada data pengalaman.", 25, y);
     }
 
-      // Save PDF
-      doc.save(`${profile.user_full_name}_CV.pdf`);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      alert("Gagal mengunduh CV. Pastikan paket jsPDF terpasang.");
-    }
+    doc.save(`Data_Diri_${profile.user_full_name}.pdf`);
   }
 
-  if (loading) {
+  if (loading || !profile) {
     return (
-      <main
-        style={{ backgroundColor: theme.colors.background }}
-        className="flex min-h-[calc(100vh-120px)] items-center justify-center"
-      >
-        <p className="text-gray-600">Memuat profil...</p>
-      </main>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <main
-        style={{ backgroundColor: theme.colors.background }}
-        className="flex min-h-[calc(100vh-120px)] items-center justify-center"
-      >
-        <div className="text-center">
-          <p className="text-red-600">{error || "Profil tidak ditemukan."}</p>
-          <button
-            onClick={() => navigate("/")}
-            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-          >
-            Kembali ke Beranda
-          </button>
-        </div>
+      <main className="flex min-h-screen items-center justify-center">
+        <p>Memuat profil...</p>
       </main>
     );
   }
@@ -219,126 +160,137 @@ export function ProfileDetail() {
   return (
     <main
       style={{ backgroundColor: theme.colors.background }}
-      className="min-h-[calc(100vh-120px)]"
+      className="min-h-screen flex items-center justify-center px-4 py-10"
     >
-      <div className="mx-auto max-w-4xl px-4 py-10">
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-4 text-sm text-gray-600 hover:text-gray-900"
-        >
-          ← Kembali
-        </button>
-
+      <div className="w-full max-w-xl">
         <div
           style={{ backgroundColor: theme.colors.surface }}
-          className="rounded-2xl border border-black/5 p-6"
+          className="rounded-3xl shadow-xl border border-slate-200 overflow-hidden"
         >
-          {/* Profile Header */}
-          <div className="mb-6 flex flex-col items-center text-center md:flex-row md:items-start md:text-left">
+          {/* HEADER */}
+          <div className="flex flex-col items-center text-center px-6 py-8 border-b border-slate-100">
             {profile.photo ? (
               <img
                 src={`${API_BASE_URL}${profile.photo}`}
                 alt={profile.user_full_name}
-                className="mb-4 h-32 w-32 rounded-full object-cover border-4 border-white shadow-md md:mb-0 md:mr-6"
+                className="h-28 w-28 rounded-full object-cover shadow-md"
               />
             ) : (
-              <div className="mb-4 flex h-32 w-32 items-center justify-center rounded-full bg-gray-200 text-4xl text-gray-500 border-4 border-white shadow-md md:mb-0 md:mr-6">
+              <div className="h-28 w-28 rounded-full bg-slate-100 flex items-center justify-center text-3xl font-bold text-slate-500">
                 {profile.user_full_name.charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{profile.user_full_name}</h1>
-              <p className="mt-1 text-sm text-gray-600">{profile.email}</p>
-              <p className="mt-1 text-sm text-gray-600">
-                {profile.nim} • {profile.prodi} • Angkatan {profile.angkatan}
+
+            <h1 className="mt-3 text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+               {profile.user_full_name}
+            </h1>
+
+            <div className="mt-1 leading-tight text-sm text-slate-500">
+               <p>{profile.email}</p>
+               <p className="opacity-90">
+                  {profile.nim} • {profile.prodi} • Angkatan {profile.angkatan}
+               </p>
+            </div>
+
+
+            {profile.headline && (
+              <p className="mt-4 max-w-xl text-slate-700">
+                {profile.headline}
               </p>
-              {profile.headline && (
-                <p className="mt-3 text-base text-gray-700">{profile.headline}</p>
-              )}
+            )}
+
+            {/* BUTTONS */}
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button
+                onClick={downloadDataDiri}
+                style={{ backgroundColor: "#334155" }}
+                className="rounded-full px-5 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
+              >
+                ⬇ Download CV Mahasiswa
+              </button>
             </div>
           </div>
 
-          {/* Download CV Button (only if logged in) */}
-          {token && (
-            <div className="mb-6 flex justify-end">
+          {/* CONTENT */}
+          <div className="px-6 py-8 space-y-6">
+
+            {/* SKILLS */}
+            {profile.skills.length > 0 && (
+              <section className="pt-1 border-b border-slate-100 pb-4">
+                <div className="rounded-2xl bg-white/80 border border-slate-200 px-5 py-4">
+                  <h2 className="mb-2 text-lg font-semibold text-slate-700 pl-1">
+                    Keahlian
+                  </h2>
+                  <ul className="space-y-1 text-sm text-slate-700 pl-3">
+
+                    {profile.skills.map((s) => (
+                      <li
+                        key={s.id}
+                        className="rounded-full bg-slate-100 px-4 py-1.5 text-sm"
+                      >
+                        {s.skill.name} ({s.level})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            )}
+
+            {/* EXPERIENCE */}
+            {profile.experiences.length > 0 && (
+              <section className="pt-1">
+                <div className="rounded-2xl bg-white/80 border border-slate-200 px-5 py-4">
+                  <h2 className="mb-2 text-lg font-semibold text-slate-700 pl-1">
+                    Pengalaman
+                  </h2>
+                  <ul className="space-y-4 text-sm text-slate-700">
+                    {profile.experiences.map((exp) => {
+                      const start = new Date(
+                        exp.start_date
+                      ).toLocaleDateString("id-ID", {
+                        month: "long",
+                        year: "numeric",
+                      });
+                      const end = exp.end_date
+                        ? new Date(exp.end_date).toLocaleDateString("id-ID", {
+                            month: "long",
+                            year: "numeric",
+                          })
+                        : "Sekarang";
+                      return (
+                        <li key={exp.id} className="space-y-1">
+                          <div className="font-medium text-slate-800">
+                            {exp.title} — {exp.company}
+                          </div>
+                          <div className="ml-4 mt-0.5 text-xs text-slate-500">
+                            {start} – {end}
+                          </div>
+                          {exp.description && (
+                            <div className="ml-4 mt-0.5 text-slate-700">
+                              {exp.description}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </section>
+            )}
+
+            {/* BACK */}
+            <div className="pt-4 border-t border-slate-100 text-center">
               <button
-                onClick={downloadCV}
-                style={{ backgroundColor: theme.colors.primary }}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+                onClick={() => navigate(-1)}
+                className="text-sm text-blue-600 hover:underline"
               >
-                Download CV (PDF)
+                ← Kembali
               </button>
             </div>
-          )}
 
-          {/* Bio */}
-          {profile.bio && (
-            <div className="mb-6">
-              <h2 className="mb-2 text-lg font-semibold text-gray-900">Tentang</h2>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
-            </div>
-          )}
-
-          {/* Skills */}
-          {profile.skills && profile.skills.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-3 text-lg font-semibold text-gray-900">Skills</h2>
-              <div className="flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <span
-                    key={skill.id}
-                    className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700"
-                  >
-                    {skill.skill.name} ({skill.level})
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Experiences */}
-          {profile.experiences && profile.experiences.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-3 text-lg font-semibold text-gray-900">Pengalaman</h2>
-              <div className="space-y-4">
-                {profile.experiences.map((exp) => (
-                  <div
-                    key={exp.id}
-                    className="rounded-lg border border-gray-200 bg-white p-4"
-                  >
-                    <h3 className="text-base font-semibold text-gray-900">{exp.title}</h3>
-                    <p className="text-sm text-gray-600">{exp.company}</p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {new Date(exp.start_date).toLocaleDateString("id-ID", {
-                        year: "numeric",
-                        month: "long",
-                      })}{" "}
-                      -{" "}
-                      {exp.end_date
-                        ? new Date(exp.end_date).toLocaleDateString("id-ID", {
-                            year: "numeric",
-                            month: "long",
-                          })
-                        : "Sekarang"}
-                    </p>
-                    {exp.description && (
-                      <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
-                        {exp.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(!profile.skills || profile.skills.length === 0) &&
-            (!profile.experiences || profile.experiences.length === 0) && (
-              <p className="text-sm text-gray-600">Belum ada informasi tambahan.</p>
-            )}
+          </div>
         </div>
       </div>
     </main>
   );
 }
-
