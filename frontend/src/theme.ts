@@ -2,14 +2,16 @@
 
 export const theme = {
   colors: {
-    primary: "#6482AD",
-    secondary: "#7FA1C3",
-    surface: "#E2DAD6",
-    background: "#F5EDED",
-    text: "#1F2933",
-    accent: "#F6C453" // terinspirasi dari warna emas logo UMS
-  }
-} as const;
+    primary: "#334155",
+    secondary: "#1E293B",
+    background: "#F8FAFC",
+    surface: "#FFFFFF",
+    accent: "#CBD5E1",
+    text: "#0F172A",
+    muted: "#475569",
+    border: "#E2E8F0",
+  },
+}
 
 
 

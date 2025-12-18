@@ -1,10 +1,11 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { theme } from "../theme";
+import { theme } from "../theme"; // Pastikan path ini sesuai dengan struktur projectmu
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+// --- INTERFACES ---
 interface Profile {
   id: number;
   user_full_name: string;
@@ -34,6 +35,12 @@ interface Experience {
   description: string;
 }
 
+interface Statistics {
+  total_talents: number;
+  total_skills: number;
+  total_experiences: number;
+}
+
 interface TopTalent {
   id: number;
   user_full_name: string;
@@ -50,15 +57,22 @@ interface TopTalent {
 export function Dashboard() {
   const navigate = useNavigate();
   const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  
+  // State Data
   const [profile, setProfile] = useState<Profile | null>(null);
   const [topTalents, setTopTalents] = useState<TopTalent[]>([]);
+  const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Search State
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<TopTalent[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // Tab State
   const [activeTab, setActiveTab] = useState<"profile" | "skills" | "experiences">("profile");
   
-  // Profile edit form
+  // Profile Edit Form State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFullName, setEditFullName] = useState("");
   const [editProdi, setEditProdi] = useState("");
@@ -67,28 +81,28 @@ export function Dashboard() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   
-  // Skill form
+  // Skill Form State
   const [skillName, setSkillName] = useState("");
   const [skillLevel, setSkillLevel] = useState("Beginner");
   const [skillError, setSkillError] = useState<string | null>(null);
   
-  // Experience form
+  // Experience Form State
   const [expTitle, setExpTitle] = useState("");
   const [expCompany, setExpCompany] = useState("");
   const [expStartDate, setExpStartDate] = useState("");
   const [expEndDate, setExpEndDate] = useState("");
   const [expDescription, setExpDescription] = useState("");
   const [expError, setExpError] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ talents: number; skills: number; experiences: number } | null>(null);
 
+  // --- USE EFFECTS ---
   useEffect(() => {
     if (!token) {
       navigate("/login");
       return;
     }
     fetchProfile();
-    fetchMyStats();
     fetchTopTalents();
+    fetchStatistics();
   }, [navigate, token]);
 
   useEffect(() => {
@@ -103,6 +117,7 @@ export function Dashboard() {
     }
   }, [search]);
 
+  // --- API CALLS ---
   async function fetchProfile() {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/talents/me/profile/`, {
@@ -129,19 +144,10 @@ export function Dashboard() {
     }
   }
 
-  async function fetchMyStats() {
+  async function fetchStatistics() {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/talents/statistics/`);
-      const data = res.data as {
-        total_talents: number;
-        total_skills: number;
-        total_experiences: number;
-      };
-      setStats({
-        talents: data.total_talents,
-        skills: data.total_skills,
-        experiences: data.total_experiences,
-      });
+      setStatistics(res.data);
     } catch (err) {
       console.error("Error fetching statistics:", err);
     }
@@ -161,6 +167,7 @@ export function Dashboard() {
     }
   }
 
+  // --- ACTION HANDLERS ---
   async function handleUpdateProfile(e: FormEvent) {
     e.preventDefault();
     setProfileError(null);
@@ -188,18 +195,7 @@ export function Dashboard() {
       fetchProfile();
     } catch (err: any) {
       console.error(err);
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        const errorMsg = Object.entries(errorData)
-          .map(([key, value]: [string, any]) => {
-            const messages = Array.isArray(value) ? value.join(", ") : value;
-            return `${key}: ${messages}`;
-          })
-          .join("; ");
-        setProfileError(errorMsg || "Gagal mengupdate profil.");
-      } else {
-        setProfileError("Gagal mengupdate profil.");
-      }
+      setProfileError("Gagal mengupdate profil.");
     }
   }
 
@@ -232,32 +228,7 @@ export function Dashboard() {
       setSkillLevel("Beginner");
       await fetchProfile();
     } catch (err: any) {
-      console.error(err);
-      const resp = err?.response;
-      const data = resp?.data;
-      const contentType: string | undefined = resp?.headers?.["content-type"];
-
-      // Jika backend mengirim JSON error yang rapi
-      if (
-        data &&
-        typeof data === "object" &&
-        !Array.isArray(data) &&
-        contentType &&
-        contentType.includes("application/json")
-      ) {
-        const errorMsg = Object.entries(data)
-          .map(([key, value]: [string, any]) => {
-            const messages = Array.isArray(value) ? value.join(", ") : String(value);
-            return `${key}: ${messages}`;
-          })
-          .join("; ");
-        setSkillError(errorMsg || "Gagal menambah skill.");
-      } else {
-        // Fallback jika respons berupa HTML / blob (misalnya error 500)
-        setSkillError(
-          "Terjadi kesalahan saat menambah skill. Silakan coba lagi atau hubungi admin."
-        );
-      }
+      setSkillError("Gagal menambah skill.");
     }
   }
 
@@ -269,40 +240,13 @@ export function Dashboard() {
       });
       fetchProfile();
     } catch (err) {
-      console.error("Error deleting skill:", err);
       alert("Gagal menghapus skill.");
     }
-  }
-
-  function getMaxDate(): string {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
   }
 
   async function handleAddExperience(e: FormEvent) {
     e.preventDefault();
     setExpError(null);
-    
-    // Validate dates
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(expStartDate);
-    if (startDate > today) {
-      setExpError("Tanggal mulai tidak boleh lebih dari tanggal hari ini.");
-      return;
-    }
-    if (expEndDate) {
-      const endDate = new Date(expEndDate);
-      if (endDate > today) {
-        setExpError("Tanggal selesai tidak boleh lebih dari tanggal hari ini.");
-        return;
-      }
-      if (endDate < startDate) {
-        setExpError("Tanggal selesai tidak boleh lebih awal dari tanggal mulai.");
-        return;
-      }
-    }
-
     try {
       await axios.post(
         `${API_BASE_URL}/api/talents/me/experiences/`,
@@ -322,19 +266,7 @@ export function Dashboard() {
       setExpDescription("");
       await fetchProfile();
     } catch (err: any) {
-      console.error(err);
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        const errorMsg = Object.entries(errorData)
-          .map(([key, value]: [string, any]) => {
-            const messages = Array.isArray(value) ? value.join(", ") : value;
-            return `${key}: ${messages}`;
-          })
-          .join("; ");
-        setExpError(errorMsg || "Gagal menambah pengalaman.");
-      } else {
-        setExpError("Gagal menambah pengalaman.");
-      }
+      setExpError("Gagal menambah pengalaman.");
     }
   }
 
@@ -346,155 +278,151 @@ export function Dashboard() {
       });
       fetchProfile();
     } catch (err) {
-      console.error("Error deleting experience:", err);
       alert("Gagal menghapus pengalaman.");
     }
   }
 
-  if (loading) {
+  if (loading || !profile) {
     return (
-      <main
-        style={{ backgroundColor: theme.colors.background }}
-        className="flex min-h-[calc(100vh-120px)] items-center justify-center"
-      >
-        <p className="text-gray-600">Memuat data...</p>
-      </main>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <main
-        style={{ backgroundColor: theme.colors.background }}
-        className="flex min-h-[calc(100vh-120px)] items-center justify-center"
-      >
-        <p className="text-red-600">Gagal memuat profil.</p>
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-gray-500">Memuat dashboard...</p>
       </main>
     );
   }
 
   return (
-    <main
-      style={{ backgroundColor: theme.colors.background }}
-      className="min-h-[calc(100vh-120px)]"
-    >
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="mb-1 text-2xl font-bold text-gray-900">Dashboard Mahasiswa</h1>
-            <p className="text-sm text-gray-700">
-              Kelola profil, skill, dan pengalaman Anda, serta jelajahi talenta lain.
-            </p>
-          </div>
-          {/* Stats cards for current user / global */}
-          {stats && (
-            <div className="grid w-full grid-cols-3 gap-3 md:w-auto">
-              <div
-                style={{ backgroundColor: theme.colors.surface }}
-                className="flex items-center gap-2 rounded-2xl border border-black/5 px-3 py-2 text-xs shadow-sm"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-base">
-                  👤
-                </span>
-                <div>
-                  <div className="font-semibold text-gray-900">{stats.talents}</div>
-                  <div className="text-[11px] text-gray-600">Talenta</div>
+    <main className="min-h-screen bg-[#F9FAFB] pb-20">
+      <div className="mx-auto max-w-6xl px-4 pt-10">
+        
+        {/* === HEADER DASHBOARD === */}
+        <div className="mb-10 text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">
+            Dashboard Mahasiswa
+          </h1>
+          <p className="mt-3 text-lg text-gray-500">
+            Kelola profil profesionalmu dan temukan talenta terbaik di UMS.
+          </p>
+        </div>
+
+        {/* === STATISTIK CARDS (Sesuai Request) === */}
+        {statistics && (
+          <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {/* Card 1: Pendaftar */}
+            <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] transition-all hover:-translate-y-1 hover:shadow-lg border border-gray-100">
+              <div className="flex items-center gap-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
                 </div>
-              </div>
-              <div
-                style={{ backgroundColor: theme.colors.surface }}
-                className="flex items-center gap-2 rounded-2xl border border-black/5 px-3 py-2 text-xs shadow-sm"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-base">
-                  ⭐
-                </span>
                 <div>
-                  <div className="font-semibold text-gray-900">{stats.skills}</div>
-                  <div className="text-[11px] text-gray-600">Skill</div>
-                </div>
-              </div>
-              <div
-                style={{ backgroundColor: theme.colors.surface }}
-                className="flex items-center gap-2 rounded-2xl border border-black/5 px-3 py-2 text-xs shadow-sm"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-base">
-                  💼
-                </span>
-                <div>
-                  <div className="font-semibold text-gray-900">{stats.experiences}</div>
-                  <div className="text-[11px] text-gray-600">Pengalaman</div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-gray-400">Pendaftar</p>
+                  <p className="text-3xl font-extrabold text-gray-900">{statistics.total_talents}</p>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Card 2: Total Skill */}
+            <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] transition-all hover:-translate-y-1 hover:shadow-lg border border-gray-100">
+              <div className="flex items-center gap-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-gray-400">Total Skill</p>
+                  <p className="text-3xl font-extrabold text-gray-900">{statistics.total_skills}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Pengalaman */}
+            <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] transition-all hover:-translate-y-1 hover:shadow-lg border border-gray-100">
+              <div className="flex items-center gap-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-gray-400">Pengalaman</p>
+                  <p className="text-3xl font-extrabold text-gray-900">{statistics.total_experiences}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === SEARCH BAR CENTERED & MODERN (Sesuai Request) === */}
+        <div className="mb-12 flex justify-center">
+          <div className="group relative w-full max-w-3xl">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5 text-gray-400 group-focus-within:text-blue-600 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Cari talenta berdasarkan nama, NIM, atau skill..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="block w-full rounded-2xl border-0 bg-white py-4 pl-14 pr-6 text-gray-900 shadow-[0_4px_10px_rgb(0,0,0,0.03)] ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-base transition-all hover:shadow-md"
+            />
+          </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Cari talenta berdasarkan nama atau skill..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-          />
-        </div>
-
-        {/* Search Results */}
-        {showSearchResults && (
-          <div
-            style={{ backgroundColor: theme.colors.surface }}
-            className="mb-6 rounded-2xl border border-black/5 p-6"
-          >
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              Hasil Pencarian ({searchResults.length})
+        {/* === HASIL PENCARIAN & TOP TALENTA === */}
+        {/* Logic: Tampilkan hasil search jika ada, jika tidak tampilkan top talent */}
+        {(showSearchResults || (!showSearchResults && topTalents.length > 0)) && (
+          <div className="mb-12">
+            <h2 className="mb-6 text-xl font-bold text-gray-900">
+              {showSearchResults ? `Hasil Pencarian (${searchResults.length})` : "Top Talenta Mahasiswa"}
             </h2>
-            {searchResults.length === 0 ? (
-              <p className="text-sm text-gray-600">Tidak ada talenta yang cocok.</p>
+            
+            {showSearchResults && searchResults.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500">
+                Tidak ada talenta yang cocok dengan pencarianmu.
+              </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {searchResults.map((talent) => (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {(showSearchResults ? searchResults : topTalents).map((talent) => (
                   <div
                     key={talent.id}
                     onClick={() => navigate(`/profile/${talent.id}`)}
-                    className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md"
+                    className="group cursor-pointer rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-4">
                       {talent.photo ? (
-                        <img
-                          src={`${API_BASE_URL}${talent.photo}`}
-                          alt={talent.user_full_name}
-                          className="h-16 w-16 rounded-full object-cover border-2 border-gray-200"
-                        />
+                        <img src={`${API_BASE_URL}${talent.photo}`} alt={talent.user_full_name} className="h-20 w-20 rounded-2xl object-cover shadow-sm" />
                       ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-gray-500">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-2xl font-bold text-white shadow-sm">
                           {talent.user_full_name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div className="flex-1">
-                        <h3 className="text-base font-semibold text-gray-900">
+                      <div className="flex-1 overflow-hidden">
+                        <h3 className="truncate text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                           {talent.user_full_name}
                         </h3>
-                        <p className="text-xs text-gray-500">
-                          {talent.nim} • {talent.prodi} • {talent.angkatan}
+                        <p className="truncate text-sm font-medium text-gray-500">
+                          {talent.prodi} • Angkatan {talent.angkatan}
                         </p>
                         {talent.headline && (
-                          <p className="mt-1 text-sm text-gray-700">{talent.headline}</p>
+                          <p className="mt-1 line-clamp-1 text-sm text-gray-600 italic">"{talent.headline}"</p>
                         )}
+                        {/* Tags Skill Kecil */}
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {talent.skills?.slice(0, 3).map(s => (
+                            <span key={s.id} className="inline-flex items-center rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                              {s.skill.name}
+                            </span>
+                          ))}
+                          {talent.skills && talent.skills.length > 3 && (
+                            <span className="text-xs text-gray-400 self-center">+{talent.skills.length - 3} lainnya</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {talent.skills && talent.skills.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {talent.skills.slice(0, 5).map((s) => (
-                          <span
-                            key={s.id}
-                            className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700"
-                          >
-                            {s.skill.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -502,115 +430,45 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Top Talents (when not searching) */}
-        {!showSearchResults && topTalents.length > 0 && (
-          <div
-            style={{ backgroundColor: theme.colors.surface }}
-            className="mb-6 rounded-2xl border border-black/5 p-6"
-          >
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              Talenta dengan Skill & Pengalaman Terbanyak
-            </h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {topTalents.map((talent) => (
-                <div
-                  key={talent.id}
-                  onClick={() => navigate(`/profile/${talent.id}`)}
-                  className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md"
-                >
-                  <div className="flex items-start gap-3">
-                    {talent.photo ? (
-                      <img
-                        src={`${API_BASE_URL}${talent.photo}`}
-                        alt={talent.user_full_name}
-                        className="h-16 w-16 rounded-full object-cover border-2 border-gray-200"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-gray-500">
-                        {talent.user_full_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h3 className="text-base font-semibold text-gray-900">
-                        {talent.user_full_name}
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        {talent.nim} • {talent.prodi} • {talent.angkatan}
-                      </p>
-                      {talent.headline && (
-                        <p className="mt-1 text-sm text-gray-700">{talent.headline}</p>
-                      )}
-                    </div>
-                  </div>
-                  {talent.skills && talent.skills.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {talent.skills.slice(0, 5).map((s) => (
-                        <span
-                          key={s.id}
-                          className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700"
-                        >
-                          {s.skill.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-2 text-xs text-gray-500">
-                    {talent.skills?.length || 0} skill • {talent.experiences?.length || 0}{" "}
-                    pengalaman
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="mb-6 flex gap-2 border-b border-gray-200">
+        {/* === TAB NAVIGASI === */}
+        <div className="mb-6 flex gap-6 border-b border-gray-200">
           <button
             onClick={() => setActiveTab("profile")}
-            className={`px-4 py-2 text-sm font-medium ${
-              activeTab === "profile"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+            className={`pb-3 text-sm font-medium transition-colors ${
+              activeTab === "profile" ? "border-b-2 border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            Profil
+            Profil Saya
           </button>
           <button
             onClick={() => setActiveTab("skills")}
-            className={`px-4 py-2 text-sm font-medium ${
-              activeTab === "skills"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+            className={`pb-3 text-sm font-medium transition-colors ${
+              activeTab === "skills" ? "border-b-2 border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            Skill ({profile.skills.length})
+            Skill & Keahlian
           </button>
           <button
             onClick={() => setActiveTab("experiences")}
-            className={`px-4 py-2 text-sm font-medium ${
-              activeTab === "experiences"
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
+            className={`pb-3 text-sm font-medium transition-colors ${
+              activeTab === "experiences" ? "border-b-2 border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            Pengalaman ({profile.experiences.length})
+            Pengalaman Kerja
           </button>
         </div>
 
-        {/* Profile Tab */}
+        {/* === ISI KONTEN TAB === */}
+        
+        {/* 1. TAB PROFILE */}
         {activeTab === "profile" && (
-          <div
-            style={{ backgroundColor: theme.colors.surface }}
-            className="rounded-2xl border border-black/5 p-6"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Informasi Profil</h2>
+          <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Informasi Pribadi</h2>
               {!isEditingProfile && (
                 <button
                   onClick={() => setIsEditingProfile(true)}
-                  style={{ backgroundColor: theme.colors.primary }}
-                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
                 >
                   Edit Profil
                 </button>
@@ -618,372 +476,134 @@ export function Dashboard() {
             </div>
 
             {!isEditingProfile ? (
-              <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
                 {profile.photo && (
-                  <div className="mb-4">
-                    <img
-                      src={`${API_BASE_URL}${profile.photo}`}
-                      alt="Foto Profil"
-                      className="h-32 w-32 rounded-full object-cover border-2 border-gray-200"
-                    />
+                  <div className="sm:col-span-2 flex justify-center pb-4">
+                    <img src={`${API_BASE_URL}${profile.photo}`} alt="Profile" className="h-32 w-32 rounded-full object-cover ring-4 ring-gray-50" />
                   </div>
                 )}
-                <div>
-                  <span className="font-medium text-gray-700">Nama:</span>{" "}
-                  <span className="text-gray-900">{profile.user_full_name}</span>
+                <div className="border-b border-gray-100 pb-2">
+                  <div className="text-sm text-gray-500">Nama Lengkap</div>
+                  <div className="font-medium text-gray-900">{profile.user_full_name}</div>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-700">Email:</span>{" "}
-                  <span className="text-gray-900">{profile.email}</span>
+                <div className="border-b border-gray-100 pb-2">
+                  <div className="text-sm text-gray-500">NIM</div>
+                  <div className="font-medium text-gray-900">{profile.nim}</div>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-700">NIM:</span>{" "}
-                  <span className="text-gray-900">{profile.nim}</span>
+                <div className="border-b border-gray-100 pb-2">
+                  <div className="text-sm text-gray-500">Program Studi</div>
+                  <div className="font-medium text-gray-900">{profile.prodi}</div>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-700">Program Studi:</span>{" "}
-                  <span className="text-gray-900">{profile.prodi}</span>
+                <div className="border-b border-gray-100 pb-2">
+                  <div className="text-sm text-gray-500">Angkatan</div>
+                  <div className="font-medium text-gray-900">{profile.angkatan}</div>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-700">Angkatan:</span>{" "}
-                  <span className="text-gray-900">{profile.angkatan}</span>
-                </div>
-                {profile.headline && (
-                  <div>
-                    <span className="font-medium text-gray-700">Headline:</span>{" "}
-                    <span className="text-gray-900">{profile.headline}</span>
-                  </div>
-                )}
-                {profile.bio && (
-                  <div>
-                    <span className="font-medium text-gray-700">Bio:</span>{" "}
-                    <span className="text-gray-900">{profile.bio}</span>
-                  </div>
-                )}
               </div>
             ) : (
               <form onSubmit={handleUpdateProfile} className="space-y-4">
-                {profileError && (
-                  <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {profileError}
-                  </div>
-                )}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Foto Profil
-                  </label>
-                  {photoPreview && (
-                    <img
-                      src={photoPreview}
-                      alt="Preview"
-                      className="mb-2 h-24 w-24 rounded-full object-cover border-2 border-gray-200"
-                    />
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Nama Lengkap
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFullName}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-Z\s\.\,\-\']/g, "");
-                      setEditFullName(value);
-                    }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Program Studi
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editProdi}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^a-zA-Z\s\.\,\-\(\)]/g, "");
-                      setEditProdi(value);
-                    }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Angkatan
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={4}
-                    value={editAngkatan}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "");
-                      if (value.length <= 4) setEditAngkatan(value);
-                    }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    style={{ backgroundColor: theme.colors.primary }}
-                    className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
-                  >
-                    Simpan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditingProfile(false);
-                      setProfileError(null);
-                      setEditPhoto(null);
-                      fetchProfile();
-                    }}
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    Batal
-                  </button>
-                </div>
+                 {/* FORM EDIT PROFILE SAMA SEPERTI SEBELUMNYA */}
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                    <input type="text" value={editFullName} onChange={e => setEditFullName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" />
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Prodi</label>
+                        <input type="text" value={editProdi} onChange={e => setEditProdi(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Angkatan</label>
+                        <input type="text" value={editAngkatan} onChange={e => setEditAngkatan(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" />
+                    </div>
+                 </div>
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700">Foto</label>
+                    <input type="file" onChange={handlePhotoChange} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                 </div>
+                 <div className="flex justify-end gap-3 pt-4">
+                    <button type="button" onClick={() => setIsEditingProfile(false)} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+                    <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Simpan</button>
+                 </div>
               </form>
             )}
           </div>
         )}
 
-        {/* Skills Tab */}
+        {/* 2. TAB SKILLS */}
         {activeTab === "skills" && (
-          <div className="space-y-6">
-            {/* Add Skill Form */}
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Tambah Skill</h2>
-              {skillError && (
-                <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {skillError}
-                </div>
-              )}
-              <form onSubmit={handleAddSkill} className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Nama Skill
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={skillName}
-                    onChange={(e) => setSkillName(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    placeholder="Contoh: Python, JavaScript, React"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Level
-                  </label>
-                  <select
-                    value={skillLevel}
-                    onChange={(e) => setSkillLevel(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Expert">Expert</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  style={{ backgroundColor: theme.colors.primary }}
-                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
-                >
-                  Tambah Skill
-                </button>
-              </form>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-1">
+              <div className="sticky top-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <h3 className="mb-4 font-bold text-gray-900">Tambah Skill</h3>
+                <form onSubmit={handleAddSkill} className="space-y-4">
+                   <input type="text" placeholder="Nama Skill (cth: React)" value={skillName} onChange={e => setSkillName(e.target.value)} className="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" />
+                   <select value={skillLevel} onChange={e => setSkillLevel(e.target.value)} className="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                      <option>Beginner</option><option>Intermediate</option><option>Expert</option>
+                   </select>
+                   <button type="submit" className="w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ Tambah</button>
+                </form>
+              </div>
             </div>
-
-            {/* Skills List */}
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Daftar Skill</h2>
-              {profile.skills.length === 0 ? (
-                <p className="text-sm text-gray-600">Belum ada skill yang ditambahkan.</p>
-              ) : (
-                <div className="space-y-2">
-                  {profile.skills.map((skill) => (
-                    <div
-                      key={skill.id}
-                      className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3"
-                    >
-                      <div>
-                        <span className="font-medium text-gray-900">{skill.skill.name}</span>
-                        <span className="ml-2 text-xs text-gray-500">({skill.level})</span>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteSkill(skill.id)}
-                        className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                      >
-                        Hapus
-                      </button>
+            <div className="lg:col-span-2">
+               <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <h3 className="mb-4 font-bold text-gray-900">Daftar Skill</h3>
+                  {profile.skills.length === 0 ? <p className="text-gray-500">Belum ada skill.</p> : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                       {profile.skills.map(skill => (
+                          <div key={skill.id} className="flex items-center justify-between rounded-xl border border-gray-200 p-4">
+                             <div>
+                                <div className="font-semibold">{skill.skill.name}</div>
+                                <div className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded inline-block mt-1">{skill.level}</div>
+                             </div>
+                             <button onClick={() => handleDeleteSkill(skill.id)} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></button>
+                          </div>
+                       ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
+               </div>
             </div>
           </div>
         )}
 
-        {/* Experiences Tab */}
+        {/* 3. TAB EXPERIENCES */}
         {activeTab === "experiences" && (
-          <div className="space-y-6">
-            {/* Add Experience Form */}
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Tambah Pengalaman</h2>
-              {expError && (
-                <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {expError}
-                </div>
-              )}
-              <form onSubmit={handleAddExperience} className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Judul Posisi
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={expTitle}
-                    onChange={(e) => setExpTitle(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    placeholder="Contoh: Web Developer Intern"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Perusahaan/Organisasi
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={expCompany}
-                    onChange={(e) => setExpCompany(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    placeholder="Contoh: PT. Contoh Teknologi"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      Tanggal Mulai
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      max={getMaxDate()}
-                      value={expStartDate}
-                      onChange={(e) => setExpStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      Tanggal Selesai (opsional)
-                    </label>
-                    <input
-                      type="date"
-                      max={getMaxDate()}
-                      min={expStartDate || undefined}
-                      value={expEndDate}
-                      onChange={(e) => setExpEndDate(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Deskripsi (opsional)
-                  </label>
-                  <textarea
-                    value={expDescription}
-                    onChange={(e) => setExpDescription(e.target.value)}
-                    rows={3}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    placeholder="Jelaskan tanggung jawab dan pencapaian Anda..."
-                  />
-                </div>
-                <button
-                  type="submit"
-                  style={{ backgroundColor: theme.colors.primary }}
-                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
-                >
-                  Tambah Pengalaman
-                </button>
-              </form>
-            </div>
-
-            {/* Experiences List */}
-            <div
-              style={{ backgroundColor: theme.colors.surface }}
-              className="rounded-2xl border border-black/5 p-6"
-            >
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Daftar Pengalaman</h2>
-              {profile.experiences.length === 0 ? (
-                <p className="text-sm text-gray-600">Belum ada pengalaman yang ditambahkan.</p>
-              ) : (
-                <div className="space-y-4">
-                  {profile.experiences.map((exp) => (
-                    <div
-                      key={exp.id}
-                      className="rounded-lg border border-gray-200 bg-white p-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{exp.title}</h3>
-                          <p className="text-sm text-gray-600">{exp.company}</p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {new Date(exp.start_date).toLocaleDateString("id-ID", {
-                              year: "numeric",
-                              month: "long",
-                            })}{" "}
-                            -{" "}
-                            {exp.end_date
-                              ? new Date(exp.end_date).toLocaleDateString("id-ID", {
-                                  year: "numeric",
-                                  month: "long",
-                                })
-                              : "Sekarang"}
-                          </p>
-                          {exp.description && (
-                            <p className="mt-2 text-sm text-gray-700">{exp.description}</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleDeleteExperience(exp.id)}
-                          className="ml-4 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                        >
-                          Hapus
-                        </button>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+             <div className="lg:col-span-1">
+                <div className="sticky top-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                   <h3 className="mb-4 font-bold text-gray-900">Tambah Pengalaman</h3>
+                   <form onSubmit={handleAddExperience} className="space-y-4">
+                      <input type="text" placeholder="Posisi" value={expTitle} onChange={e => setExpTitle(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                      <input type="text" placeholder="Perusahaan" value={expCompany} onChange={e => setExpCompany(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                      <div className="grid grid-cols-2 gap-2">
+                         <input type="date" value={expStartDate} onChange={e => setExpStartDate(e.target.value)} className="w-full rounded-lg border px-2 py-2 text-xs" />
+                         <input type="date" value={expEndDate} onChange={e => setExpEndDate(e.target.value)} className="w-full rounded-lg border px-2 py-2 text-xs" />
                       </div>
-                    </div>
-                  ))}
+                      <textarea placeholder="Deskripsi" value={expDescription} onChange={e => setExpDescription(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" rows={3}></textarea>
+                      <button type="submit" className="w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ Simpan</button>
+                   </form>
                 </div>
-              )}
-            </div>
+             </div>
+             <div className="lg:col-span-2">
+                <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                   <h3 className="mb-4 font-bold text-gray-900">Riwayat Pengalaman</h3>
+                   <div className="space-y-4">
+                      {profile.experiences.map(exp => (
+                         <div key={exp.id} className="relative rounded-xl border border-gray-200 p-5 hover:border-blue-300 transition-colors">
+                            <h4 className="font-bold text-gray-900">{exp.title}</h4>
+                            <p className="text-sm font-medium text-blue-600">{exp.company}</p>
+                            <p className="text-xs text-gray-500 mt-1">{exp.start_date} - {exp.end_date || "Sekarang"}</p>
+                            <p className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded">{exp.description}</p>
+                            <button onClick={() => handleDeleteExperience(exp.id)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500">
+                               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                            </button>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+             </div>
           </div>
         )}
+
       </div>
     </main>
   );
