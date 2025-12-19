@@ -9,7 +9,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY", "nanti di ganti")
 
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -108,6 +109,8 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS: list[Path] = [BASE_DIR / "static"]
 
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -133,6 +136,9 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True") == "True"
+
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if os.getenv("CORS_ALLOWED_ORIGINS") else []
+CORS_ALLOW_CREDENTIALS = True
 
 SWAGGER_SETTINGS = {
     "USE_SESSION_AUTH": False,
