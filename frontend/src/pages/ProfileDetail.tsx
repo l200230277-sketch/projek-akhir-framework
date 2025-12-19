@@ -365,6 +365,28 @@ export function ProfileDetail() {
             <p style={{ fontSize: '1.125rem', color: '#64748b', marginBottom: '24px', fontWeight: '500' }}>
               {profile.headline || `${profile.prodi} • ${profile.angkatan}`}
             </p>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <a 
+                href={`mailto:${profile.email}`}
+                style={{ 
+                  fontSize: '1rem', 
+                  color: '#2563eb', 
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: '500'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {profile.email}
+              </a>
+            </div>
 
             {/* Grid Detail Info */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
