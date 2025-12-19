@@ -27,7 +27,7 @@ export function Register() {
     setError(null);
     setLoading(true);
 
-    // Validasi sederhana di sisi client
+    // Validasi sederhana email UMS
     if (!email.endsWith("@student.ums.ac.id") && !email.endsWith("@ums.ac.id")) {
       setError("Gunakan email resmi UMS (@student.ums.ac.id atau @ums.ac.id).");
       setLoading(false);
@@ -35,8 +35,11 @@ export function Register() {
     }
 
     try {
-      // Request ke backend endpoint register
-      await axios.post(`${API_BASE_URL}/api/accounts/register/`, {
+      // PERBAIKAN PENTING: Tambahkan /auth/ di URL agar sesuai dengan Login
+      const url = `${API_BASE_URL}/api/accounts/auth/register/`;
+      console.log("Mencoba register ke:", url); // Cek console browser (F12)
+
+      await axios.post(url, {
         user_full_name,
         nim,
         prodi,
@@ -45,22 +48,39 @@ export function Register() {
         password,
       });
       
-      // Jika sukses, tampilkan alert dan redirect ke login
+      // Jika sukses
       alert("Registrasi berhasil! Silakan login.");
       navigate("/login");
       
     } catch (err: any) {
-      console.error("Register Error:", err);
-      // Menangkap pesan error spesifik dari backend jika ada
-      if (err.response && err.response.data) {
-        // Mengambil pesan error pertama dari object error (misal: "Email sudah terdaftar")
-        const firstErrorKey = Object.keys(err.response.data)[0];
-        const errorMessage = Array.isArray(err.response.data[firstErrorKey]) 
-          ? err.response.data[firstErrorKey][0] 
-          : err.response.data[firstErrorKey] || "Gagal mendaftar. Periksa kembali data Anda.";
-        setError(errorMessage);
+      console.error("Register Error Detail:", err); // Cek detail error di console
+
+      // Handling Error yang Lebih Kuat
+      if (err.response) {
+        // Server merespon tapi dengan kode error (4xx, 5xx)
+        const data = err.response.data;
+        
+        if (typeof data === 'object') {
+          // Jika error berupa object JSON (biasanya dari Django Rest Framework)
+          // Contoh: { "email": ["Email sudah terdaftar"], "nim": ["..."] }
+          const keys = Object.keys(data);
+          if (keys.length > 0) {
+            const firstKey = keys[0];
+            const firstMsg = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
+            // Ubah pesan jadi lebih ramah
+            setError(`${firstKey.toUpperCase()}: ${firstMsg}`);
+          } else {
+            setError("Terjadi kesalahan validasi data.");
+          }
+        } else {
+          // Jika error berupa string atau HTML (Server Error / 404 URL Salah)
+          setError("Gagal menghubungi server. Pastikan URL API benar.");
+        }
+      } else if (err.request) {
+        // Tidak ada respon dari server (Server mati / Internet putus)
+        setError("Tidak dapat terhubung ke server backend.");
       } else {
-        setError("Terjadi kesalahan jaringan. Silakan coba lagi.");
+        setError("Terjadi kesalahan sistem.");
       }
     } finally {
       setLoading(false);
@@ -68,19 +88,19 @@ export function Register() {
   }
 
   // Style umum untuk label input
-  const labelStyle = {
+  const labelStyle: React.CSSProperties = {
     display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#334155', marginBottom: '8px'
   };
 
   // Style umum untuk input field
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     width: '100%', padding: '12px 16px', borderRadius: '12px',
     border: '1px solid #cbd5e1', outline: 'none', fontSize: '1rem',
     transition: 'border-color 0.2s, background-color 0.2s',
     backgroundColor: '#f8fafc'
   };
 
-  // Fungsi helper untuk efek fokus pada input
+  // Helper focus effect
   const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     e.target.style.borderColor = UMS_BLUE;
     e.target.style.backgroundColor = 'white';
@@ -90,14 +110,13 @@ export function Register() {
     e.target.style.backgroundColor = '#f8fafc';
   };
 
-
   return (
     <main style={{ 
       minHeight: '100vh', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center', 
-      backgroundColor: '#f8fafc', // Background abu-abu terang yang bersih
+      backgroundColor: '#f8fafc', 
       padding: '40px 20px'
     }}>
       
@@ -105,10 +124,10 @@ export function Register() {
       <div style={{ 
         backgroundColor: 'white', 
         width: '100%', 
-        maxWidth: '600px', // Sedikit lebih lebar dari login untuk mengakomodasi input bersebelahan
+        maxWidth: '600px', 
         padding: '48px', 
         borderRadius: '24px', 
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', // Shadow halus profesional
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', 
         border: '1px solid #f1f5f9'
       }}>
         
@@ -139,10 +158,10 @@ export function Register() {
           {/* Input Nama Lengkap */}
           <div>
             <label style={labelStyle}>Nama Lengkap</label>
-            <input type="text" required placeholder="Contoh: Amelia Putricia Wardani" value={user_full_name} onChange={(e) => setFullName(e.target.value)} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+            <input type="text" required placeholder="Contoh: Adinda Putri" value={user_full_name} onChange={(e) => setFullName(e.target.value)} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
           </div>
 
-          {/* Grid untuk NIM dan Prodi (Bersebelahan) */}
+          {/* Grid untuk NIM dan Prodi */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
               <label style={labelStyle}>NIM</label>
@@ -154,12 +173,11 @@ export function Register() {
             </div>
           </div>
 
-          {/* Input Angkatan (Menggunakan Select agar lebih rapi) */}
+          {/* Input Angkatan */}
           <div>
             <label style={labelStyle}>Angkatan</label>
              <select required value={angkatan} onChange={(e) => setAngkatan(e.target.value)} style={{...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem'}} onFocus={handleFocus} onBlur={handleBlur}>
                 <option value="" disabled>Pilih Angkatan</option>
-                {/* Menghasilkan opsi tahun dari 5 tahun lalu sampai tahun depan */}
                 {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 4 + i).reverse().map(year => (
                     <option key={year} value={year}>{year}</option>
                 ))}
@@ -170,7 +188,7 @@ export function Register() {
           <div>
             <label style={labelStyle}>Email UMS</label>
             <input type="email" required placeholder="nim@student.ums.ac.id" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
-            <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>Gunakan email berakhiran @student.ums.ac.id atau @ums.ac.id</p>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>Gunakan email berakhiran @student.ums.ac.id</p>
           </div>
 
           {/* Input Password */}
@@ -179,27 +197,27 @@ export function Register() {
             <input type="password" required placeholder="Buat password yang aman" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
           </div>
 
-          {/* Tombol Submit Profesional */}
+          {/* Tombol Submit */}
           <button
             type="submit"
             disabled={loading}
             style={{
-              width: '100%', padding: '16px', backgroundColor: UMS_BLUE, color: 'white', // Warna tema UMS
+              width: '100%', padding: '16px', backgroundColor: UMS_BLUE, color: 'white',
               fontSize: '1rem', fontWeight: '700', border: 'none', borderRadius: '12px',
               cursor: loading ? 'not-allowed' : 'pointer', marginTop: '24px',
-              boxShadow: '0 4px 6px -1px rgba(30, 41, 59, 0.2)', // Efek shadow pada tombol
+              boxShadow: '0 4px 6px -1px rgba(30, 41, 59, 0.2)',
               transition: 'all 0.2s',
               opacity: loading ? 0.7 : 1
             }}
-            onMouseOver={(e) => !loading && (e.currentTarget.style.backgroundColor = '#0f172a', e.currentTarget.style.transform = 'translateY(-1px)')}
-            onMouseOut={(e) => !loading && (e.currentTarget.style.backgroundColor = UMS_BLUE, e.currentTarget.style.transform = 'translateY(0)')}
+            onMouseOver={(e) => !loading && (e.currentTarget.style.backgroundColor = '#0f172a')}
+            onMouseOut={(e) => !loading && (e.currentTarget.style.backgroundColor = UMS_BLUE)}
           >
             {loading ? "Memproses Pendaftaran..." : "Daftar Sekarang"}
           </button>
 
         </form>
 
-        {/* Link Footer ke Login */}
+        {/* Link Footer */}
         <p style={{ textAlign: 'center', marginTop: '32px', color: '#64748b', fontSize: '0.95rem' }}>
           Sudah punya akun?{' '}
           <Link to="/login" style={{ color: UMS_BLUE, fontWeight: '600', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0f172a'} onMouseOut={(e) => e.currentTarget.style.color = UMS_BLUE}>
