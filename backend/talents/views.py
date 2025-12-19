@@ -50,7 +50,7 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user.profile
 
     def get(self, request, *args, **kwargs):
-        serializer = StudentProfileSerializer(self.get_object())
+        serializer = StudentProfileSerializer(self.get_object(), context={"request": request})
         return Response(serializer.data)
 
 
@@ -237,7 +237,7 @@ def top_talents_view(request):
         .order_by('-skill_count', '-experience_count')[:2]
     )
     
-    serializer = StudentProfileSerializer(talents, many=True)
+    serializer = StudentProfileSerializer(talents, many=True, context={"request": request})
     return Response(serializer.data)
 
 

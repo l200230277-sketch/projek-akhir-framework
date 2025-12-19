@@ -15,6 +15,7 @@ interface Talent {
   angkatan: string;
   headline: string;
   photo: string | null;
+  photo_url?: string | null;
   skills: { id: number; skill: { id: number; name: string }; level: string }[];
   experiences: { id: number; title: string; company: string }[];
 }
@@ -34,9 +35,14 @@ export function PublicDashboard() {
   const [searchResults, setSearchResults] = useState<Talent[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [latestTalents, setLatestTalents] = useState<Talent[]>([]);
+
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
+    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
 
   useEffect(() => {
     fetchStatistics();
+    fetchLatestTalents();
   }, []);
 
   useEffect(() => {
@@ -59,6 +65,16 @@ export function PublicDashboard() {
       console.error("Error fetching statistics:", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchLatestTalents() {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/talents/latest/`);
+      const data = Array.isArray(res.data) ? res.data : res.data?.results ?? [];
+      setLatestTalents(data);
+    } catch (err) {
+      console.error("Error fetching latest talents:", err);
     }
   }
 
@@ -275,9 +291,9 @@ export function PublicDashboard() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                      {talent.photo ? (
+                      {getPhotoSrc(talent.photo, talent.photo_url) ? (
                         <img 
-                          src={`${API_BASE_URL}${talent.photo}`} 
+                          src={getPhotoSrc(talent.photo, talent.photo_url) || undefined} 
                           alt={talent.user_full_name} 
                           style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', backgroundColor: '#f3f4f6' }} 
                         />
@@ -318,6 +334,74 @@ export function PublicDashboard() {
             )}
           </div>
         )}
+
+        {/* === TALENTA TERBARU (5) === */}
+        <section style={{ marginTop: showSearchResults ? '60px' : '0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>Talenta Terbaru</h2>
+              <p style={{ color: '#6b7280', margin: 0 }}>5 talenta terbaru yang dibuka publik.</p>
+            </div>
+          </div>
+          {latestTalents.length === 0 ? (
+            <div style={{ padding: '32px', borderRadius: '16px', border: '1px dashed #e5e7eb', backgroundColor: 'white', textAlign: 'center', color: '#6b7280' }}>
+              Belum ada talenta publik yang dapat ditampilkan.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+              {latestTalents.map((talent) => (
+                <div
+                  key={talent.id}
+                  onClick={() => navigate(`/profile/${talent.id}`)}
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '14px',
+                    border: '1px solid #e5e7eb',
+                    padding: '18px',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.05)';
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
+                    {getPhotoSrc(talent.photo, talent.photo_url) ? (
+                      <img
+                        src={getPhotoSrc(talent.photo, talent.photo_url) || undefined}
+                        alt={talent.user_full_name}
+                        style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', backgroundColor: '#f8fafc' }}
+                      />
+                    ) : (
+                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1rem' }}>
+                        {talent.user_full_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ overflow: 'hidden' }}>
+                      <p style={{ fontWeight: 700, color: '#111827', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{talent.user_full_name}</p>
+                      <p style={{ margin: '2px 0 0 0', color: '#6b7280', fontSize: '0.9rem' }}>{talent.prodi} • {talent.angkatan}</p>
+                    </div>
+                  </div>
+                  {talent.skills?.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {talent.skills.slice(0, 3).map((s) => (
+                        <span key={s.id} style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {s.skill.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
       </div>
     </main>

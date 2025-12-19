@@ -93,6 +93,7 @@ class SocialLinkSerializer(serializers.ModelSerializer):
 class StudentProfileSerializer(serializers.ModelSerializer):
     user_full_name = serializers.CharField(source="user.full_name", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
+    photo_url = serializers.SerializerMethodField()
     skills = StudentSkillSerializer(source="student_skills", many=True, read_only=True)
     experiences = ExperienceSerializer(many=True, read_only=True)
     projects = PortfolioProjectSerializer(many=True, read_only=True)
@@ -110,6 +111,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "headline",
             "bio",
             "photo",
+            "photo_url",
             "is_public",
             "is_active",
             "views_count",
@@ -122,6 +124,16 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["views_count", "created_at", "updated_at", "is_active"]
 
+    def get_photo_url(self, obj: StudentProfile):
+        """
+        Kembalikan URL absolut supaya dapat diakses publik tanpa login.
+        """
+        if not obj.photo:
+            return None
+        request = self.context.get("request")
+        url = obj.photo.url
+        return request.build_absolute_uri(url) if request else url
+
 
 class StudentProfileUpdateSerializer(serializers.ModelSerializer):
     user_full_name = serializers.CharField(source="user.full_name", required=False, allow_blank=True)
@@ -133,10 +145,14 @@ class StudentProfileUpdateSerializer(serializers.ModelSerializer):
         return value.strip() if value else value
     
     def validate_angkatan(self, value):
-        if value and len(value) != 4:
-            raise serializers.ValidationError("Angkatan harus 4 digit.")
-        if value and not value.isdigit():
-            raise serializers.ValidationError("Angkatan hanya boleh berisi angka.")
+        year_max = 2026
+        if value:
+            if len(value) != 4:
+                raise serializers.ValidationError("Angkatan harus 4 digit.")
+            if not value.isdigit():
+                raise serializers.ValidationError("Angkatan hanya boleh berisi angka.")
+            if int(value) > year_max:
+                raise serializers.ValidationError(f"Angkatan maksimal {year_max}.")
         return value
     
     def validate_user_full_name(self, value):

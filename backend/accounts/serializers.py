@@ -54,13 +54,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate_angkatan(self, value: str) -> str:
-        if not value.strip():
+        year_max = 2026
+        value = value.strip()
+        if not value:
             raise serializers.ValidationError("Angkatan wajib diisi.")
         if len(value) != 4:
             raise serializers.ValidationError("Angkatan harus 4 digit.")
         if not value.isdigit():
             raise serializers.ValidationError("Angkatan hanya boleh berisi angka.")
-        return value.strip()
+        if int(value) > year_max:
+            raise serializers.ValidationError(f"Angkatan maksimal {year_max}.")
+        return value
 
     def validate_prodi(self, value: str) -> str:
         if not value.strip():

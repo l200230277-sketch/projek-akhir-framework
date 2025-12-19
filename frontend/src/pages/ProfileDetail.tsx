@@ -18,6 +18,7 @@ interface Profile {
   headline?: string;
   bio?: string;
   photo: string | null;
+  photo_url?: string | null;
   cv: string | null; 
   skills: {
     id: number;
@@ -40,6 +41,20 @@ export function ProfileDetail() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
+    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
+
+  const fetchImageAsDataUrl = async (url: string) => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
   useEffect(() => {
     if (id) fetchProfile();
@@ -64,6 +79,18 @@ export function ProfileDetail() {
     const jsPDF = (await import("jspdf")).default;
     const doc = new jsPDF();
     let y = 20;
+    const photoSrc = getPhotoSrc(profile.photo, profile.photo_url);
+
+    if (photoSrc) {
+      try {
+        const dataUrl = await fetchImageAsDataUrl(photoSrc);
+        const format: "PNG" | "JPEG" = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+        doc.addImage(dataUrl, format, 20, y, 30, 30);
+        y += 40;
+      } catch (imgErr) {
+        console.error("Gagal memuat foto untuk PDF:", imgErr);
+      }
+    }
 
     // --- LOGIKA PDF ASLI KAMU ---
     doc.setFontSize(18);
@@ -221,9 +248,9 @@ export function ProfileDetail() {
           
           {/* FOTO PROFIL */}
           <div style={{ flex: '0 0 auto', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '200px', margin: '0 auto' }}>
-            {profile.photo ? (
+            {getPhotoSrc(profile.photo, profile.photo_url) ? (
               <img 
-                src={`${API_BASE_URL}${profile.photo}`} 
+                src={getPhotoSrc(profile.photo, profile.photo_url) || undefined} 
                 alt={profile.user_full_name} 
                 style={{ width: '180px', height: '180px', borderRadius: '50%', objectFit: 'cover', border: '6px solid #f8fafc', boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.1)' }} 
               />

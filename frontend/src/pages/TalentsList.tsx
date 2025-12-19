@@ -16,6 +16,7 @@ type Talent = {
   headline: string;
   bio: string;
   photo: string | null;
+  photo_url?: string | null;
   skills: { id: number; skill: { id: number; name: string }; level: string }[];
 };
 
@@ -26,6 +27,8 @@ export function TalentsList() {
   const [items, setItems] = useState<Talent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
+    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
 
   // Debounce Search Logic
   useEffect(() => {
@@ -158,7 +161,7 @@ export function TalentsList() {
            </div>
         ) : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ditemukan</h3>
@@ -196,9 +199,9 @@ export function TalentsList() {
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                   {/* Avatar Logic */}
-                  {t.photo ? (
+                  {getPhotoSrc(t.photo, t.photo_url) ? (
                     <img 
-                      src={`${API_BASE_URL}${t.photo}`} 
+                      src={getPhotoSrc(t.photo, t.photo_url) || undefined} 
                       alt={t.user_full_name} 
                       style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', backgroundColor: '#f3f4f6' }} 
                     />

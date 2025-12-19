@@ -47,8 +47,21 @@ export function Login() {
       
     } catch (err: any) {
       console.error("Login Gagal:", err);
-      // Pesan error lebih ramah
-      setError("Email atau password salah. Silakan coba lagi.");
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === "string") {
+          setError(data);
+        } else if (data.detail) {
+          setError(data.detail);
+        } else {
+          const messages = Object.values(data)
+            .map((msg: any) => (Array.isArray(msg) ? msg.join(" ") : String(msg)))
+            .join(" | ");
+          setError(messages || "Email atau password salah. Silakan coba lagi.");
+        }
+      } else {
+        setError("Email atau password salah. Silakan coba lagi.");
+      }
     } finally {
       setLoading(false);
     }

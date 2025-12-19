@@ -27,9 +27,22 @@ export function Register() {
     setError(null);
     setLoading(true);
 
+    const yearMax = 2026;
     // Validasi sederhana email UMS
-    if (!email.endsWith("@student.ums.ac.id") && !email.endsWith("@ums.ac.id")) {
-      setError("Gunakan email resmi UMS (@student.ums.ac.id atau @ums.ac.id).");
+    if (!email.endsWith("@student.ums.ac.id")) {
+      setError("Gunakan email resmi @student.ums.ac.id sesuai aturan kampus.");
+      setLoading(false);
+      return;
+    }
+    // Validasi angkatan: hanya angka 4 digit dan maksimal yearMax
+    const angkatanTrim = angkatan.trim();
+    if (angkatanTrim.length !== 4 || !/^\d{4}$/.test(angkatanTrim)) {
+      setError("Angkatan harus 4 digit angka.");
+      setLoading(false);
+      return;
+    }
+    if (parseInt(angkatanTrim, 10) > yearMax) {
+      setError(`Angkatan maksimal ${yearMax}.`);
       setLoading(false);
       return;
     }
@@ -40,10 +53,10 @@ export function Register() {
       console.log("Mencoba register ke:", url); // Cek console browser (F12)
 
       await axios.post(url, {
-        user_full_name,
+        full_name: user_full_name,
         nim,
         prodi,
-        angkatan,
+        angkatan: angkatanTrim,
         email,
         password,
       });
@@ -61,17 +74,12 @@ export function Register() {
         const data = err.response.data;
         
         if (typeof data === 'object') {
-          // Jika error berupa object JSON (biasanya dari Django Rest Framework)
-          // Contoh: { "email": ["Email sudah terdaftar"], "nim": ["..."] }
-          const keys = Object.keys(data);
-          if (keys.length > 0) {
-            const firstKey = keys[0];
-            const firstMsg = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
-            // Ubah pesan jadi lebih ramah
-            setError(`${firstKey.toUpperCase()}: ${firstMsg}`);
-          } else {
-            setError("Terjadi kesalahan validasi data.");
-          }
+          // Gabungkan semua error supaya jelas
+          const messages = Object.entries(data).map(([field, msg]) => {
+            const text = Array.isArray(msg) ? msg.join(" ") : String(msg);
+            return `${field.toUpperCase()}: ${text}`;
+          });
+          setError(messages.join(" | ") || "Terjadi kesalahan validasi data.");
         } else {
           // Jika error berupa string atau HTML (Server Error / 404 URL Salah)
           setError("Gagal menghubungi server. Pastikan URL API benar.");
@@ -176,12 +184,18 @@ export function Register() {
           {/* Input Angkatan */}
           <div>
             <label style={labelStyle}>Angkatan</label>
-             <select required value={angkatan} onChange={(e) => setAngkatan(e.target.value)} style={{...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem'}} onFocus={handleFocus} onBlur={handleBlur}>
-                <option value="" disabled>Pilih Angkatan</option>
-                {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 4 + i).reverse().map(year => (
-                    <option key={year} value={year}>{year}</option>
-                ))}
-            </select>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              required
+              placeholder="Contoh: 2020 (maksimal 2026)"
+              value={angkatan}
+              onChange={(e) => setAngkatan(e.target.value.replace(/[^\d]/g, ""))}
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
           </div>
 
           {/* Input Email UMS */}

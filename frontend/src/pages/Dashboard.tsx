@@ -16,6 +16,7 @@ interface Profile {
   headline: string;
   bio: string;
   photo: string | null;
+  photo_url?: string | null;
   skills: Skill[];
   experiences: Experience[];
 }
@@ -50,6 +51,7 @@ interface TopTalent {
   angkatan: string;
   headline: string;
   photo: string | null;
+  photo_url?: string | null;
   skills: { id: number; skill: { id: number; name: string }; level: string }[];
   experiences: { id: number; title: string; company: string }[];
 }
@@ -81,7 +83,6 @@ export function Dashboard() {
   const [editFullName, setEditFullName] = useState("");
   const [editProdi, setEditProdi] = useState("");
   const [editAngkatan, setEditAngkatan] = useState("");
-  const [editNim, setEditNim] = useState(""); // GANTI HEADLINE JADI NIM
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -96,6 +97,22 @@ export function Dashboard() {
   const [expEndDate, setExpEndDate] = useState("");
   const [expDescription, setExpDescription] = useState("");
   const [expError, setExpError] = useState<string | null>(null);
+
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
+    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
+
+  const extractErrorMessage = (err: any): string | null => {
+    const data = err?.response?.data;
+    if (!data) return err?.message ?? null;
+    if (typeof data === "string") return data;
+    if (Array.isArray(data)) return data.join(" ");
+    return Object.entries(data)
+      .map(
+        ([field, msg]) =>
+          `${field}: ${Array.isArray(msg) ? msg.join(" ") : String(msg)}`
+      )
+      .join(" | ");
+  };
 
   useEffect(() => {
     if (!token) {
@@ -129,8 +146,7 @@ export function Dashboard() {
       setEditFullName(res.data.user_full_name);
       setEditProdi(res.data.prodi);
       setEditAngkatan(res.data.angkatan);
-      setEditNim(res.data.nim); // Set NIM ke state edit
-      setPhotoPreview(res.data.photo ? `${API_BASE_URL}${res.data.photo}` : null);
+      setPhotoPreview(getPhotoSrc(res.data.photo, res.data.photo_url));
     } catch (err) {
       console.error("Error fetching profile:", err);
     } finally {
@@ -175,11 +191,20 @@ export function Dashboard() {
     e.preventDefault();
     setProfileError(null);
     try {
+      const angkatanClean = editAngkatan.trim();
+      const yearMax = 2026;
+      if (angkatanClean && (!/^\d{4}$/.test(angkatanClean) || parseInt(angkatanClean, 10) > yearMax)) {
+        setProfileError(`Angkatan harus 4 digit angka dan maksimal ${yearMax}.`);
+        return;
+      }
+      if (!editFullName.trim()) {
+        setProfileError("Nama lengkap wajib diisi.");
+        return;
+      }
       const formData = new FormData();
-      formData.append("user_full_name", editFullName);
+      formData.append("user_full_name", editFullName.trim());
       formData.append("prodi", editProdi);
-      formData.append("angkatan", editAngkatan);
-      formData.append("nim", editNim); // Kirim NIM yang diedit
+      formData.append("angkatan", angkatanClean);
       if (editPhoto) {
         formData.append("photo", editPhoto);
       }
@@ -198,7 +223,7 @@ export function Dashboard() {
       setEditPhoto(null);
       fetchProfile();
     } catch (err: any) {
-      setProfileError("Gagal mengupdate profil.");
+      setProfileError(extractErrorMessage(err) || "Gagal mengupdate profil.");
     }
   }
 
@@ -229,7 +254,7 @@ export function Dashboard() {
       setSkillLevel("Beginner");
       await fetchProfile();
     } catch (err: any) {
-      setSkillError("Gagal menambah skill.");
+      setSkillError(extractErrorMessage(err) || "Gagal menambah skill.");
     }
   }
 
@@ -267,7 +292,7 @@ export function Dashboard() {
       setExpDescription("");
       await fetchProfile();
     } catch (err: any) {
-      setExpError("Gagal menambah pengalaman.");
+      setExpError(extractErrorMessage(err) || "Gagal menambah pengalaman.");
     }
   }
 
@@ -295,6 +320,7 @@ export function Dashboard() {
 
   // --- STYLES ---
   const UMS_BLUE = "#334155"; 
+  const profilePhoto = getPhotoSrc(profile.photo, profile.photo_url);
 
   const statCardStyle: React.CSSProperties = {
     flex: '1', 
@@ -377,13 +403,18 @@ export function Dashboard() {
                     </button>
                   )}
                 </div>
+                {profileError && (
+                  <div style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', fontWeight: 600 }}>
+                    {profileError}
+                  </div>
+                )}
 
                 {!isEditingProfile ? (
                   // --- MODE LIHAT (VIEW) ---
                   <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                     <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                      {profile.photo ? (
-                        <img src={`${API_BASE_URL}${profile.photo}`} alt="Foto" style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt="Foto" style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
                       ) : (
                         <div style={{ width: '160px', height: '160px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', fontWeight: 'bold', color: '#cbd5e1' }}>
                           {profile.user_full_name.charAt(0)}
@@ -490,25 +521,13 @@ export function Dashboard() {
                           <input 
                             type="text" 
                             value={editAngkatan} 
-                            onChange={e => setEditAngkatan(e.target.value)} 
+                            maxLength={4}
+                            onChange={e => setEditAngkatan(e.target.value.replace(/[^\d]/g, "").slice(0, 4))} 
                             style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
                             onFocus={(e) => e.target.style.borderColor = UMS_BLUE}
                             onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                           />
                         </div>
-                      </div>
-
-                      {/* NIM (GANTI HEADLINE) */}
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>NIM</label>
-                        <input 
-                          type="text" 
-                          value={editNim} 
-                          onChange={e => setEditNim(e.target.value)} 
-                          style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
-                          onFocus={(e) => e.target.style.borderColor = UMS_BLUE}
-                          onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                        />
                       </div>
 
                       {/* Tombol Aksi */}
@@ -542,6 +561,11 @@ export function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
                 <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '16px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '20px', color: '#0f172a' }}>Tambah Skill Baru</h3>
+                  {skillError && (
+                    <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', fontWeight: 600 }}>
+                      {skillError}
+                    </div>
+                  )}
                   <form onSubmit={handleAddSkill} style={{ display: 'grid', gap: '16px' }}>
                     <input type="text" placeholder="Nama Skill" value={skillName} onChange={e => setSkillName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                     <select value={skillLevel} onChange={e => setSkillLevel(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
@@ -570,6 +594,11 @@ export function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
                 <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '16px', border: '1px solid #e2e8f0', height: 'fit-content' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '20px', color: '#0f172a' }}>Tambah Pengalaman</h3>
+                  {expError && (
+                    <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', fontWeight: 600 }}>
+                      {expError}
+                    </div>
+                  )}
                   <form onSubmit={handleAddExperience} style={{ display: 'grid', gap: '16px' }}>
                     <input type="text" placeholder="Posisi (cth: Web Developer)" value={expTitle} onChange={e => setExpTitle(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                     <input type="text" placeholder="Perusahaan" value={expCompany} onChange={e => setExpCompany(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
@@ -611,8 +640,8 @@ export function Dashboard() {
                 {searchResults.map((talent) => (
                   <div key={talent.id} onClick={() => navigate(`/profile/${talent.id}`)} className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-3">
-                      {talent.photo ? (
-                        <img src={`${API_BASE_URL}${talent.photo}`} alt={talent.user_full_name} className="h-16 w-16 rounded-full object-cover" />
+                      {getPhotoSrc(talent.photo, talent.photo_url) ? (
+                        <img src={getPhotoSrc(talent.photo, talent.photo_url) || undefined} alt={talent.user_full_name} className="h-16 w-16 rounded-full object-cover" />
                       ) : (
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white text-xl font-bold">
                           {talent.user_full_name.charAt(0).toUpperCase()}
