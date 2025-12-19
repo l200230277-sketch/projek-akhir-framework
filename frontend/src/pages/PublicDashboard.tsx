@@ -37,8 +37,60 @@ export function PublicDashboard() {
   const [loading, setLoading] = useState(true);
   const [latestTalents, setLatestTalents] = useState<Talent[]>([]);
 
-  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
-    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) => {
+    // Prioritaskan photoUrl jika sudah ada (biasanya sudah full URL dari API)
+    if (photoUrl) {
+      // Jika photoUrl sudah full URL (http/https), periksa apakah masih menggunakan /media/
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        // Jika URL masih menggunakan /media/, konversi ke endpoint khusus
+        if (photoUrl.includes('/media/')) {
+          const filePath = photoUrl.split('/media/')[1];
+          const baseUrl = photoUrl.split('/media/')[0];
+          return `${baseUrl}/api/talents/media/${filePath}`;
+        }
+        return photoUrl;
+      }
+      // Jika photoUrl adalah path relatif yang sudah menggunakan endpoint khusus
+      if (photoUrl.startsWith('/api/talents/media/')) {
+        return `${API_BASE_URL}${photoUrl}`;
+      }
+      // Jika photoUrl adalah path relatif dengan /media/, konversi ke endpoint khusus
+      if (photoUrl.startsWith('/media/')) {
+        const filePath = photoUrl.replace('/media/', '');
+        return `${API_BASE_URL}/api/talents/media/${filePath}`;
+      }
+      // Jika photoUrl adalah path relatif lainnya, tambahkan API_BASE_URL
+      if (photoUrl.startsWith('/')) {
+        return `${API_BASE_URL}${photoUrl}`;
+      }
+      return photoUrl;
+    }
+    
+    // Jika tidak ada photoUrl, gunakan photo
+    if (photo) {
+      // Jika photo sudah full URL, periksa apakah masih menggunakan /media/
+      if (photo.startsWith('http://') || photo.startsWith('https://')) {
+        // Jika URL masih menggunakan /media/, konversi ke endpoint khusus
+        if (photo.includes('/media/')) {
+          const filePath = photo.split('/media/')[1];
+          const baseUrl = photo.split('/media/')[0];
+          return `${baseUrl}/api/talents/media/${filePath}`;
+        }
+        return photo;
+      }
+      // Jika photo adalah path relatif dengan /media/, konversi ke endpoint khusus
+      if (photo.startsWith('/media/')) {
+        const filePath = photo.replace('/media/', '');
+        return `${API_BASE_URL}/api/talents/media/${filePath}`;
+      }
+      // Jika photo adalah path relatif lainnya, tambahkan API_BASE_URL
+      if (photo.startsWith('/')) {
+        return `${API_BASE_URL}${photo}`;
+      }
+      return `${API_BASE_URL}${photo}`;
+    }
+    return null;
+  };
 
   useEffect(() => {
     fetchStatistics();
@@ -291,22 +343,15 @@ export function PublicDashboard() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                      {getPhotoSrc(talent.photo, talent.photo_url) ? (
-                        <img 
-                          src={getPhotoSrc(talent.photo, talent.photo_url) || undefined} 
-                          alt={talent.user_full_name} 
-                          style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', backgroundColor: '#f3f4f6' }} 
-                        />
-                      ) : (
-                        <div style={{ 
-                          width: '80px', height: '80px', borderRadius: '12px', 
-                          background: 'linear-gradient(to bottom right, #3b82f6, #4f46e5)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: 'white', fontSize: '1.5rem', fontWeight: 'bold'
-                        }}>
-                          {talent.user_full_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <div style={{ 
+                        width: '80px', height: '80px', borderRadius: '12px', 
+                        background: 'linear-gradient(to bottom right, #3b82f6, #4f46e5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white', fontSize: '1.5rem', fontWeight: 'bold',
+                        flexShrink: 0
+                      }}>
+                        {talent.user_full_name.charAt(0).toUpperCase()}
+                      </div>
                       
                       <div style={{ flex: 1, overflow: 'hidden' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#111827', margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -372,17 +417,9 @@ export function PublicDashboard() {
                   }}
                 >
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
-                    {getPhotoSrc(talent.photo, talent.photo_url) ? (
-                      <img
-                        src={getPhotoSrc(talent.photo, talent.photo_url) || undefined}
-                        alt={talent.user_full_name}
-                        style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', backgroundColor: '#f8fafc' }}
-                      />
-                    ) : (
-                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1rem' }}>
-                        {talent.user_full_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1rem', flexShrink: 0 }}>
+                      {talent.user_full_name.charAt(0).toUpperCase()}
+                    </div>
                     <div style={{ overflow: 'hidden' }}>
                       <p style={{ fontWeight: 700, color: '#111827', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{talent.user_full_name}</p>
                       <p style={{ margin: '2px 0 0 0', color: '#6b7280', fontSize: '0.9rem' }}>{talent.prodi} • {talent.angkatan}</p>

@@ -83,8 +83,6 @@ export function Dashboard() {
   const [editFullName, setEditFullName] = useState("");
   const [editProdi, setEditProdi] = useState("");
   const [editAngkatan, setEditAngkatan] = useState("");
-  const [editPhoto, setEditPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   
   const [skillName, setSkillName] = useState("");
@@ -98,8 +96,60 @@ export function Dashboard() {
   const [expDescription, setExpDescription] = useState("");
   const [expError, setExpError] = useState<string | null>(null);
 
-  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
-    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) => {
+    // Prioritaskan photoUrl jika sudah ada (biasanya sudah full URL dari API)
+    if (photoUrl) {
+      // Jika photoUrl sudah full URL (http/https), periksa apakah masih menggunakan /media/
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        // Jika URL masih menggunakan /media/, konversi ke endpoint khusus
+        if (photoUrl.includes('/media/')) {
+          const filePath = photoUrl.split('/media/')[1];
+          const baseUrl = photoUrl.split('/media/')[0];
+          return `${baseUrl}/api/talents/media/${filePath}`;
+        }
+        return photoUrl;
+      }
+      // Jika photoUrl adalah path relatif yang sudah menggunakan endpoint khusus
+      if (photoUrl.startsWith('/api/talents/media/')) {
+        return `${API_BASE_URL}${photoUrl}`;
+      }
+      // Jika photoUrl adalah path relatif dengan /media/, konversi ke endpoint khusus
+      if (photoUrl.startsWith('/media/')) {
+        const filePath = photoUrl.replace('/media/', '');
+        return `${API_BASE_URL}/api/talents/media/${filePath}`;
+      }
+      // Jika photoUrl adalah path relatif lainnya, tambahkan API_BASE_URL
+      if (photoUrl.startsWith('/')) {
+        return `${API_BASE_URL}${photoUrl}`;
+      }
+      return photoUrl;
+    }
+    
+    // Jika tidak ada photoUrl, gunakan photo
+    if (photo) {
+      // Jika photo sudah full URL, periksa apakah masih menggunakan /media/
+      if (photo.startsWith('http://') || photo.startsWith('https://')) {
+        // Jika URL masih menggunakan /media/, konversi ke endpoint khusus
+        if (photo.includes('/media/')) {
+          const filePath = photo.split('/media/')[1];
+          const baseUrl = photo.split('/media/')[0];
+          return `${baseUrl}/api/talents/media/${filePath}`;
+        }
+        return photo;
+      }
+      // Jika photo adalah path relatif dengan /media/, konversi ke endpoint khusus
+      if (photo.startsWith('/media/')) {
+        const filePath = photo.replace('/media/', '');
+        return `${API_BASE_URL}/api/talents/media/${filePath}`;
+      }
+      // Jika photo adalah path relatif lainnya, tambahkan API_BASE_URL
+      if (photo.startsWith('/')) {
+        return `${API_BASE_URL}${photo}`;
+      }
+      return `${API_BASE_URL}${photo}`;
+    }
+    return null;
+  };
 
   const extractErrorMessage = (err: any): string | null => {
     const data = err?.response?.data;
@@ -146,7 +196,6 @@ export function Dashboard() {
       setEditFullName(res.data.user_full_name);
       setEditProdi(res.data.prodi);
       setEditAngkatan(res.data.angkatan);
-      setPhotoPreview(getPhotoSrc(res.data.photo, res.data.photo_url));
     } catch (err) {
       console.error("Error fetching profile:", err);
     } finally {
@@ -201,41 +250,27 @@ export function Dashboard() {
         setProfileError("Nama lengkap wajib diisi.");
         return;
       }
-      const formData = new FormData();
-      formData.append("user_full_name", editFullName.trim());
-      formData.append("prodi", editProdi);
-      formData.append("angkatan", angkatanClean);
-      if (editPhoto) {
-        formData.append("photo", editPhoto);
-      }
-
       await axios.patch(
         `${API_BASE_URL}/api/talents/me/profile/`,
-        formData,
+        {
+          user_full_name: editFullName.trim(),
+          prodi: editProdi,
+          angkatan: angkatanClean,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
+            "Content-Type": "application/json",
           },
         }
       );
       setIsEditingProfile(false);
-      setEditPhoto(null);
       fetchProfile();
     } catch (err: any) {
       setProfileError(extractErrorMessage(err) || "Gagal mengupdate profil.");
     }
   }
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      setEditPhoto(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  }
 
   async function handleAddSkill(e: FormEvent) {
     e.preventDefault();
@@ -319,8 +354,7 @@ export function Dashboard() {
   if (!profile) return null;
 
   // --- STYLES ---
-  const UMS_BLUE = "#334155"; 
-  const profilePhoto = getPhotoSrc(profile.photo, profile.photo_url);
+  const UMS_BLUE = "#334155";
 
   const statCardStyle: React.CSSProperties = {
     flex: '1', 
@@ -413,13 +447,25 @@ export function Dashboard() {
                   // --- MODE LIHAT (VIEW) ---
                   <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                     <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                      {profilePhoto ? (
-                        <img src={profilePhoto} alt="Foto" style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                      ) : (
-                        <div style={{ width: '160px', height: '160px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', fontWeight: 'bold', color: '#cbd5e1' }}>
-                          {profile.user_full_name.charAt(0)}
-                        </div>
-                      )}
+                      <div 
+                        style={{ 
+                          width: '160px', 
+                          height: '160px', 
+                          borderRadius: '50%', 
+                          backgroundColor: '#f1f5f9', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          fontSize: '3.5rem', 
+                          fontWeight: 'bold', 
+                          color: '#cbd5e1',
+                          margin: '0 auto',
+                          border: '4px solid white',
+                          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        {profile.user_full_name.charAt(0).toUpperCase()}
+                      </div>
                     </div>
                     {/* BAGIAN DATA: 3 KOLOM x 2 BARIS */}
                     <div style={{ 
@@ -456,36 +502,11 @@ export function Dashboard() {
                     
                     {/* BAGIAN FOTO (KIRI) */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ position: 'relative', width: '160px', height: '160px' }}>
-                        {photoPreview ? (
-                          <img 
-                            src={photoPreview} 
-                            alt="Preview" 
-                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }} 
-                          />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '3.5rem', fontWeight: 'bold' }}>
-                            {profile.user_full_name.charAt(0)}
-                          </div>
-                        )}
-                        <label 
-                          htmlFor="photo-upload" 
-                          style={{
-                            position: 'absolute', bottom: '0', right: '0',
-                            backgroundColor: UMS_BLUE, color: 'white',
-                            width: '40px', height: '40px', borderRadius: '50%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                            transition: 'transform 0.2s'
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        </label>
+                      <div style={{ width: '160px', height: '160px' }}>
+                        <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '3.5rem', fontWeight: 'bold', border: '4px solid white', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                          {profile.user_full_name.charAt(0).toUpperCase()}
+                        </div>
                       </div>
-                      <input id="photo-upload" type="file" onChange={handlePhotoChange} style={{ display: 'none' }} />
-                      <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Klik ikon kamera untuk ganti foto</p>
                     </div>
 
                     {/* BAGIAN INPUT (KANAN) */}
@@ -640,13 +661,9 @@ export function Dashboard() {
                 {searchResults.map((talent) => (
                   <div key={talent.id} onClick={() => navigate(`/profile/${talent.id}`)} className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-3">
-                      {getPhotoSrc(talent.photo, talent.photo_url) ? (
-                        <img src={getPhotoSrc(talent.photo, talent.photo_url) || undefined} alt={talent.user_full_name} className="h-16 w-16 rounded-full object-cover" />
-                      ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white text-xl font-bold">
-                          {talent.user_full_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white text-xl font-bold">
+                        {talent.user_full_name.charAt(0).toUpperCase()}
+                      </div>
                       <div>
                         <h3 className="font-semibold text-gray-900">{talent.user_full_name}</h3>
                         <p className="text-sm text-gray-500">{talent.prodi} • {talent.angkatan}</p>

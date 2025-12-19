@@ -41,19 +41,95 @@ export function ProfileDetail() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Cek apakah user sudah login
+  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const isAuthenticated = !!token;
 
-  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
-    photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
+  const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) => {
+    // Prioritaskan photoUrl jika sudah ada (biasanya sudah full URL dari API)
+    if (photoUrl) {
+      // Jika photoUrl sudah full URL (http/https), periksa apakah masih menggunakan /media/
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        // Jika URL masih menggunakan /media/, konversi ke endpoint khusus
+        if (photoUrl.includes('/media/')) {
+          const filePath = photoUrl.split('/media/')[1];
+          const baseUrl = photoUrl.split('/media/')[0];
+          return `${baseUrl}/api/talents/media/${filePath}`;
+        }
+        return photoUrl;
+      }
+      // Jika photoUrl adalah path relatif yang sudah menggunakan endpoint khusus
+      if (photoUrl.startsWith('/api/talents/media/')) {
+        return `${API_BASE_URL}${photoUrl}`;
+      }
+      // Jika photoUrl adalah path relatif dengan /media/, konversi ke endpoint khusus
+      if (photoUrl.startsWith('/media/')) {
+        const filePath = photoUrl.replace('/media/', '');
+        return `${API_BASE_URL}/api/talents/media/${filePath}`;
+      }
+      // Jika photoUrl adalah path relatif lainnya, tambahkan API_BASE_URL
+      if (photoUrl.startsWith('/')) {
+        return `${API_BASE_URL}${photoUrl}`;
+      }
+      return photoUrl;
+    }
+    
+    // Jika tidak ada photoUrl, gunakan photo
+    if (photo) {
+      // Jika photo sudah full URL, periksa apakah masih menggunakan /media/
+      if (photo.startsWith('http://') || photo.startsWith('https://')) {
+        // Jika URL masih menggunakan /media/, konversi ke endpoint khusus
+        if (photo.includes('/media/')) {
+          const filePath = photo.split('/media/')[1];
+          const baseUrl = photo.split('/media/')[0];
+          return `${baseUrl}/api/talents/media/${filePath}`;
+        }
+        return photo;
+      }
+      // Jika photo adalah path relatif dengan /media/, konversi ke endpoint khusus
+      if (photo.startsWith('/media/')) {
+        const filePath = photo.replace('/media/', '');
+        return `${API_BASE_URL}/api/talents/media/${filePath}`;
+      }
+      // Jika photo adalah path relatif lainnya, tambahkan API_BASE_URL
+      if (photo.startsWith('/')) {
+        return `${API_BASE_URL}${photo}`;
+      }
+      return `${API_BASE_URL}${photo}`;
+    }
+    return null;
+  };
 
-  const fetchImageAsDataUrl = async (url: string) => {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+  const fetchImageAsDataUrl = async (url: string): Promise<string | null> => {
+    try {
+      const res = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit',
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const blob = await res.blob();
+      
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            resolve(reader.result as string);
+          } else {
+            reject(new Error('Failed to read image'));
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read image blob'));
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -75,26 +151,38 @@ export function ProfileDetail() {
 
   async function downloadDataDiri() {
     if (!profile) return;
-
-    const jsPDF = (await import("jspdf")).default;
-    const doc = new jsPDF();
-    let y = 20;
-    const photoSrc = getPhotoSrc(profile.photo, profile.photo_url);
-
-    if (photoSrc) {
-      try {
-        const dataUrl = await fetchImageAsDataUrl(photoSrc);
-        const format: "PNG" | "JPEG" = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
-        const imgWidth = 40;
-        const imgHeight = 40;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const x = (pageWidth - imgWidth) / 2;
-        doc.addImage(dataUrl, format, x, y, imgWidth, imgHeight);
-        y += imgHeight + 10;
-      } catch (imgErr) {
-        console.error("Gagal memuat foto untuk PDF:", imgErr);
-      }
+    
+    // Cek apakah user sudah login
+    if (!isAuthenticated) {
+      alert("Anda harus login terlebih dahulu untuk mengunduh CV.");
+      navigate("/login");
+      return;
     }
+
+    try {
+      const jsPDF = (await import("jspdf")).default;
+      const doc = new jsPDF();
+      let y = 20;
+      const photoSrc = getPhotoSrc(profile.photo, profile.photo_url);
+
+      // Coba load foto untuk PDF
+      if (photoSrc) {
+        try {
+          const dataUrl = await fetchImageAsDataUrl(photoSrc);
+          if (dataUrl) {
+            const format: "PNG" | "JPEG" = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+            const imgWidth = 40;
+            const imgHeight = 40;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const x = (pageWidth - imgWidth) / 2;
+            doc.addImage(dataUrl, format, x, y, imgWidth, imgHeight);
+            y += imgHeight + 10;
+          }
+        } catch (imgErr) {
+          console.error("Gagal memuat foto untuk PDF:", imgErr);
+          // Lanjutkan tanpa foto jika gagal
+        }
+      }
 
     // --- LOGIKA PDF ASLI KAMU ---
     doc.setFontSize(18);
@@ -175,7 +263,13 @@ export function ProfileDetail() {
       doc.text("Belum ada data pengalaman.", 25, y);
     }
 
-    doc.save(`Data_Diri_${profile.user_full_name}.pdf`);
+      // Pastikan PDF valid sebelum save
+      const fileName = `Data_Diri_${profile.user_full_name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Gagal membuat PDF. Silakan coba lagi.");
+    }
   }
 
   // --- TAMPILAN LOADING ---
@@ -252,23 +346,15 @@ export function ProfileDetail() {
           
           {/* FOTO PROFIL */}
           <div style={{ flex: '0 0 auto', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '200px', margin: '0 auto' }}>
-            {getPhotoSrc(profile.photo, profile.photo_url) ? (
-              <img 
-                src={getPhotoSrc(profile.photo, profile.photo_url) || undefined} 
-                alt={profile.user_full_name} 
-                style={{ width: '180px', height: '180px', borderRadius: '50%', objectFit: 'cover', border: '6px solid #f8fafc', boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.1)' }} 
-              />
-            ) : (
-              <div style={{ 
-                width: '180px', height: '180px', borderRadius: '50%', 
-                background: `linear-gradient(135deg, ${UMS_BLUE}, #334155)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: '4rem', fontWeight: 'bold',
-                boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.1)', border: '6px solid #f8fafc'
-              }}>
-                {profile.user_full_name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <div style={{ 
+              width: '180px', height: '180px', borderRadius: '50%', 
+              background: `linear-gradient(135deg, ${UMS_BLUE}, #334155)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', fontSize: '4rem', fontWeight: 'bold',
+              boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.1)', border: '6px solid #f8fafc'
+            }}>
+              {profile.user_full_name.charAt(0).toUpperCase()}
+            </div>
           </div>
 
           {/* INFO UTAMA */}
@@ -293,23 +379,37 @@ export function ProfileDetail() {
               </div>
             </div>
 
-            {/* Tombol PDF */}
-            <button 
-              onClick={downloadDataDiri}
-              style={{
+            {/* Tombol PDF - Hanya tampil jika user sudah login */}
+            {isAuthenticated ? (
+              <button 
+                onClick={downloadDataDiri}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  backgroundColor: UMS_BLUE, color: 'white',
+                  padding: '14px 28px', borderRadius: '12px',
+                  fontWeight: '600', textDecoration: 'none', border: 'none', cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(30, 41, 59, 0.25)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Download CV (PDF)
+              </button>
+            ) : (
+              <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '10px',
-                backgroundColor: UMS_BLUE, color: 'white',
+                backgroundColor: '#e2e8f0', color: '#64748b',
                 padding: '14px 28px', borderRadius: '12px',
-                fontWeight: '600', textDecoration: 'none', border: 'none', cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(30, 41, 59, 0.25)',
-                transition: 'transform 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              Download CV (PDF)
-            </button>
+                fontWeight: '600', border: 'none',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                cursor: 'not-allowed'
+              }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Login untuk Download CV
+              </div>
+            )}
           </div>
         </div>
 
