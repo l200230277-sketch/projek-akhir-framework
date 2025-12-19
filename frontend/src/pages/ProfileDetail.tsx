@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { theme } from "../theme"; 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Warna Tema (Menggunakan theme atau default dark blue UMS)
 const UMS_BLUE = theme?.colors?.primary || "#1e293b";

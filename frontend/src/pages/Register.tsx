@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 // Definisi Base URL dan Warna Tema
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const UMS_BLUE = "#1e293b"; // Warna biru dongker profesional UMS
 
 export function Register() {
