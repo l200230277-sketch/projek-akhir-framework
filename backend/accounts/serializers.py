@@ -54,7 +54,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate_angkatan(self, value: str) -> str:
-        year_max = 2026
+        year_max = 2025
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Angkatan wajib diisi.")

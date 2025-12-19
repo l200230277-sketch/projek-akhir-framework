@@ -145,7 +145,7 @@ class StudentProfileUpdateSerializer(serializers.ModelSerializer):
         return value.strip() if value else value
     
     def validate_angkatan(self, value):
-        year_max = 2026
+        year_max = 2025
         if value:
             if len(value) != 4:
                 raise serializers.ValidationError("Angkatan harus 4 digit.")

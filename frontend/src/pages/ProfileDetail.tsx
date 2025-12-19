@@ -85,8 +85,12 @@ export function ProfileDetail() {
       try {
         const dataUrl = await fetchImageAsDataUrl(photoSrc);
         const format: "PNG" | "JPEG" = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
-        doc.addImage(dataUrl, format, 20, y, 30, 30);
-        y += 40;
+        const imgWidth = 40;
+        const imgHeight = 40;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const x = (pageWidth - imgWidth) / 2;
+        doc.addImage(dataUrl, format, x, y, imgWidth, imgHeight);
+        y += imgHeight + 10;
       } catch (imgErr) {
         console.error("Gagal memuat foto untuk PDF:", imgErr);
       }

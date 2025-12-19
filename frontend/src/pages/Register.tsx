@@ -27,7 +27,7 @@ export function Register() {
     setError(null);
     setLoading(true);
 
-    const yearMax = 2026;
+    const yearMax = 2025;
     // Validasi sederhana email UMS
     if (!email.endsWith("@student.ums.ac.id")) {
       setError("Gunakan email resmi @student.ums.ac.id sesuai aturan kampus.");
@@ -189,7 +189,7 @@ export function Register() {
               inputMode="numeric"
               maxLength={4}
               required
-              placeholder="Contoh: 2020 (maksimal 2026)"
+              placeholder="Contoh: 2020 (maksimal 2025)"
               value={angkatan}
               onChange={(e) => setAngkatan(e.target.value.replace(/[^\d]/g, ""))}
               style={inputStyle}

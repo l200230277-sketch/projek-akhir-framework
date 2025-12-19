@@ -192,7 +192,7 @@ export function Dashboard() {
     setProfileError(null);
     try {
       const angkatanClean = editAngkatan.trim();
-      const yearMax = 2026;
+      const yearMax = 2025;
       if (angkatanClean && (!/^\d{4}$/.test(angkatanClean) || parseInt(angkatanClean, 10) > yearMax)) {
         setProfileError(`Angkatan harus 4 digit angka dan maksimal ${yearMax}.`);
         return;
