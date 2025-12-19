@@ -27,6 +27,7 @@ export function TalentsList() {
   const [items, setItems] = useState<Talent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   const getPhotoSrc = (photo?: string | null, photoUrl?: string | null) =>
     photoUrl || (photo ? `${API_BASE_URL}${photo}` : null);
 
@@ -73,14 +74,12 @@ export function TalentsList() {
           </p>
         </div>
 
-        {/* === FILTER SECTION (Jarak Diperbaiki) === */}
-        {/* Added marginBottom: '60px' disini buat jarak ke kartu profil */}
+        {/* === FILTER SECTION === */}
         <div 
           className="flex flex-col justify-center gap-4 md:flex-row" 
           style={{ marginBottom: '60px' }} 
         >
-          
-          {/* 1. Input Search (Icon Kaca Pembesar) */}
+          {/* 1. Input Search */}
           <div style={{ position: 'relative', width: '100%', maxWidth: '450px' }}>
             <div style={{ 
               position: 'absolute', 
@@ -113,7 +112,7 @@ export function TalentsList() {
             />
           </div>
 
-          {/* 2. Input Filter Skill (Icon Petir) */}
+          {/* 2. Input Filter Skill */}
           <div style={{ position: 'relative', width: '100%', maxWidth: '450px' }}>
              <div style={{ 
               position: 'absolute', 
@@ -157,15 +156,31 @@ export function TalentsList() {
         {/* === LIST CONTENT === */}
         {loading ? (
            <div className="text-center py-20">
-             <p className="text-gray-500 animate-pulse">Memuat data talenta...</p>
+             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+             <p className="mt-4 text-gray-500">Memuat data talenta...</p>
            </div>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center">
-            <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ditemukan</h3>
-            <p className="mt-1 text-sm text-gray-500">Coba ubah kata kunci pencarian atau filter skillmu.</p>
+          /* BAGIAN YANG DIPERBAIKI: Ikon Sad Face */
+          <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 md:p-20 text-center">
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                <svg 
+                    style={{ width: '64px', height: '64px', color: '#9ca3af' }} 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                >
+                    <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={1.5} 
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Talenta tidak ditemukan</h3>
+            <p className="mt-2 text-sm text-gray-500 max-w-xs mx-auto">
+                Maaf, kami tidak dapat menemukan talenta yang sesuai dengan kata kunci atau filter tersebut.
+            </p>
           </div>
         ) : (
           <div style={{ 
@@ -189,7 +204,7 @@ export function TalentsList() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
                   e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
-                  e.currentTarget.style.borderColor = '#BFDBFE'; // Blue-200
+                  e.currentTarget.style.borderColor = '#BFDBFE';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
@@ -198,7 +213,6 @@ export function TalentsList() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                  {/* Avatar Logic */}
                   {getPhotoSrc(t.photo, t.photo_url) ? (
                     <img 
                       src={getPhotoSrc(t.photo, t.photo_url) || undefined} 
@@ -231,7 +245,6 @@ export function TalentsList() {
                        </p>
                     )}
                     
-                    {/* Skills Tags */}
                     {t.skills?.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: t.headline ? '0' : '8px' }}>
                         {t.skills.slice(0, 4).map((s) => (

@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
-import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
@@ -10,7 +9,11 @@ import { PublicDashboard } from "./pages/PublicDashboard";
 import { ProfileDetail } from "./pages/ProfileDetail";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("accessToken")
+      : null;
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
@@ -18,6 +21,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // ✅ TARUH DI SINI
+  console.log("🔥 API BASE URL =", import.meta.env.VITE_API_BASE_URL);
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -26,7 +32,14 @@ function App() {
           <Route path="/" element={<PublicDashboard />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/talents" element={<TalentsList />} />
           <Route path="/profile/:id" element={<ProfileDetail />} />
         </Routes>
@@ -37,6 +50,3 @@ function App() {
 }
 
 export default App;
-
-
-
