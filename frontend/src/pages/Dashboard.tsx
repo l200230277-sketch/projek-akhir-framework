@@ -81,6 +81,7 @@ export function Dashboard() {
   const [editFullName, setEditFullName] = useState("");
   const [editProdi, setEditProdi] = useState("");
   const [editAngkatan, setEditAngkatan] = useState("");
+  const [editNim, setEditNim] = useState(""); // GANTI HEADLINE JADI NIM
   const [editPhoto, setEditPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -128,6 +129,7 @@ export function Dashboard() {
       setEditFullName(res.data.user_full_name);
       setEditProdi(res.data.prodi);
       setEditAngkatan(res.data.angkatan);
+      setEditNim(res.data.nim); // Set NIM ke state edit
       setPhotoPreview(res.data.photo ? `${API_BASE_URL}${res.data.photo}` : null);
     } catch (err) {
       console.error("Error fetching profile:", err);
@@ -177,6 +179,7 @@ export function Dashboard() {
       formData.append("user_full_name", editFullName);
       formData.append("prodi", editProdi);
       formData.append("angkatan", editAngkatan);
+      formData.append("nim", editNim); // Kirim NIM yang diedit
       if (editPhoto) {
         formData.append("photo", editPhoto);
       }
@@ -242,11 +245,6 @@ export function Dashboard() {
     }
   }
 
-  function getMaxDate(): string {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  }
-
   async function handleAddExperience(e: FormEvent) {
     e.preventDefault();
     setExpError(null);
@@ -296,7 +294,7 @@ export function Dashboard() {
   if (!profile) return null;
 
   // --- STYLES ---
-  const UMS_BLUE = "#1e293b"; 
+  const UMS_BLUE = "#334155"; 
 
   const statCardStyle: React.CSSProperties = {
     flex: '1', 
@@ -328,71 +326,6 @@ export function Dashboard() {
     <main style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '5rem' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
         
-        {/* === HEADER === */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-            Dashboard Mahasiswa
-          </h1>
-          <p style={{ color: '#64748b' }}>
-            Selamat datang, <span style={{ fontWeight: '600', color: UMS_BLUE }}>{profile.user_full_name}</span>! Kelola portofolio Anda di sini.
-          </p>
-        </div>
-
-        {/* === STATISTIK CARDS === */}
-        {statistics && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '40px', justifyContent: 'center' }}>
-            {/* Card 1 */}
-            <div style={statCardStyle}>
-              <div style={statIconBoxStyle}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-              </div>
-              <div style={textGroupStyle}>
-                <p style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', opacity: 0.8, margin: 0 }}>Total Talenta</p>
-                <p style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: '1', margin: 0 }}>{statistics.total_talents}</p>
-              </div>
-            </div>
-            {/* Card 2 */}
-            <div style={statCardStyle}>
-              <div style={statIconBoxStyle}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              </div>
-              <div style={textGroupStyle}>
-                <p style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', opacity: 0.8, margin: 0 }}>Total Skill</p>
-                <p style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: '1', margin: 0 }}>{statistics.total_skills}</p>
-              </div>
-            </div>
-            {/* Card 3 */}
-            <div style={statCardStyle}>
-              <div style={statIconBoxStyle}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-              </div>
-              <div style={textGroupStyle}>
-                <p style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', opacity: 0.8, margin: 0 }}>Pengalaman</p>
-                <p style={{ fontSize: '1.75rem', fontWeight: '800', lineHeight: '1', margin: 0 }}>{statistics.total_experiences}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --- SEARCH BAR --- */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: '800px' }}>
-            <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', pointerEvents: 'none' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#94a3b8" strokeWidth={2} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Cari talenta lain berdasarkan nama atau skill..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: '100%', padding: '16px 20px 16px 50px', fontSize: '1rem', borderRadius: '9999px',
-                border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', outline: 'none'
-              }}
-            />
-          </div>
-        </div>
-
         {/* --- TABS NAVIGASI --- */}
         {!showSearchResults && (
           <>
@@ -432,11 +365,13 @@ export function Dashboard() {
             {activeTab === "profile" && (
               <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>Informasi Pribadi</h2>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+                    {isEditingProfile ? 'Edit Profil' : 'Informasi Pribadi'}
+                  </h2>
                   {!isEditingProfile && (
                     <button
                       onClick={() => setIsEditingProfile(true)}
-                      style={{ backgroundColor: '#2563eb', color: 'white', padding: '10px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '0.9rem', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px rgba(37, 99, 235, 0.2)' }}
+                      style={{ backgroundColor: '#334155', color: 'white', padding: '10px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '0.9rem', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px rgba(37, 99, 235, 0.2)' }}
                     >
                       Edit Profil
                     </button>
@@ -444,6 +379,7 @@ export function Dashboard() {
                 </div>
 
                 {!isEditingProfile ? (
+                  // --- MODE LIHAT (VIEW) ---
                   <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                     <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
                       {profile.photo ? (
@@ -454,11 +390,11 @@ export function Dashboard() {
                         </div>
                       )}
                     </div>
-                    {/* BAGIAN DATA: 3 KOLOM x 2 BARIS (Headline dihapus jadi 5 item) */}
+                    {/* BAGIAN DATA: 3 KOLOM x 2 BARIS */}
                     <div style={{ 
                       flex: '1', 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(3, 1fr)', // 3 Kolom
+                      gridTemplateColumns: 'repeat(3, 1fr)', 
                       gap: '32px 40px' 
                     }}>
                       <div>
@@ -481,33 +417,120 @@ export function Dashboard() {
                         <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase' }}>Angkatan</p>
                         <p style={{ fontSize: '1.1rem', fontWeight: '500', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>{profile.angkatan}</p>
                       </div>
-                      {/* Kosong (untuk menyeimbangkan grid) */}
-                      <div></div>
                     </div>
                   </div>
                 ) : (
-                  <form onSubmit={handleUpdateProfile} style={{ display: 'grid', gap: '24px', maxWidth: '800px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Nama Lengkap</label>
-                      <input type="text" value={editFullName} onChange={e => setEditFullName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Prodi</label>
-                        <input type="text" value={editProdi} onChange={e => setEditProdi(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                  // --- MODE EDIT (FORM PROFESIONAL & NIM DITAMBAHKAN) ---
+                  <form onSubmit={handleUpdateProfile} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px', alignItems: 'start' }}>
+                    
+                    {/* BAGIAN FOTO (KIRI) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+                        {photoPreview ? (
+                          <img 
+                            src={photoPreview} 
+                            alt="Preview" 
+                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }} 
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '3.5rem', fontWeight: 'bold' }}>
+                            {profile.user_full_name.charAt(0)}
+                          </div>
+                        )}
+                        <label 
+                          htmlFor="photo-upload" 
+                          style={{
+                            position: 'absolute', bottom: '0', right: '0',
+                            backgroundColor: UMS_BLUE, color: 'white',
+                            width: '40px', height: '40px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                            transition: 'transform 0.2s'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </label>
                       </div>
+                      <input id="photo-upload" type="file" onChange={handlePhotoChange} style={{ display: 'none' }} />
+                      <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Klik ikon kamera untuk ganti foto</p>
+                    </div>
+
+                    {/* BAGIAN INPUT (KANAN) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      {/* Nama Lengkap */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Angkatan</label>
-                        <input type="text" value={editAngkatan} onChange={e => setEditAngkatan(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem' }} />
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nama Lengkap</label>
+                        <input 
+                          type="text" 
+                          value={editFullName} 
+                          onChange={e => setEditFullName(e.target.value)} 
+                          style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }}
+                          onFocus={(e) => e.target.style.borderColor = UMS_BLUE}
+                          onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                        />
                       </div>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Ganti Foto</label>
-                      <input type="file" onChange={handlePhotoChange} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '16px' }}>
-                      <button type="button" onClick={() => setIsEditingProfile(false)} style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>Batal</button>
-                      <button type="submit" style={{ padding: '12px 24px', borderRadius: '8px', backgroundColor: '#2563eb', color: 'white', fontWeight: '600', border: 'none', cursor: 'pointer' }}>Simpan Perubahan</button>
+
+                      {/* Grid Prodi & Angkatan */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Prodi</label>
+                          <input 
+                            type="text" 
+                            value={editProdi} 
+                            onChange={e => setEditProdi(e.target.value)} 
+                            style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
+                            onFocus={(e) => e.target.style.borderColor = UMS_BLUE}
+                            onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Angkatan</label>
+                          <input 
+                            type="text" 
+                            value={editAngkatan} 
+                            onChange={e => setEditAngkatan(e.target.value)} 
+                            style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
+                            onFocus={(e) => e.target.style.borderColor = UMS_BLUE}
+                            onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                          />
+                        </div>
+                      </div>
+
+                      {/* NIM (GANTI HEADLINE) */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>NIM</label>
+                        <input 
+                          type="text" 
+                          value={editNim} 
+                          onChange={e => setEditNim(e.target.value)} 
+                          style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
+                          onFocus={(e) => e.target.style.borderColor = UMS_BLUE}
+                          onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                        />
+                      </div>
+
+                      {/* Tombol Aksi */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '16px' }}>
+                        <button 
+                          type="button" 
+                          onClick={() => setIsEditingProfile(false)} 
+                          style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', fontWeight: '600', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        >
+                          Batal
+                        </button>
+                        <button 
+                          type="submit" 
+                          style={{ padding: '12px 24px', borderRadius: '8px', backgroundColor: UMS_BLUE, color: 'white', fontWeight: '600', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(30, 41, 59, 0.2)' }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = UMS_BLUE}
+                        >
+                          Simpan Perubahan
+                        </button>
+                      </div>
                     </div>
                   </form>
                 )}
@@ -524,7 +547,7 @@ export function Dashboard() {
                     <select value={skillLevel} onChange={e => setSkillLevel(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                       <option>Beginner</option><option>Intermediate</option><option>Expert</option>
                     </select>
-                    <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#2563eb', color: 'white', fontWeight: '600', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>+ Tambah</button>
+                    <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#334155', color: 'white', fontWeight: '600', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>+ Tambah</button>
                   </form>
                 </div>
                 
@@ -533,7 +556,7 @@ export function Dashboard() {
                     <div key={skill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                       <div>
                         <p style={{ fontWeight: '700', color: '#0f172a', fontSize: '1.1rem' }}>{skill.skill.name}</p>
-                        <span style={{ fontSize: '0.8rem', backgroundColor: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '6px', fontWeight: '600', marginTop: '6px', display: 'inline-block' }}>{skill.level}</span>
+                        <span style={{ fontSize: '0.8rem', backgroundColor: '#eff6ff', color: '#0f172a', padding: '4px 10px', borderRadius: '6px', fontWeight: '600', marginTop: '6px', display: 'inline-block' }}>{skill.level}</span>
                       </div>
                       <button onClick={() => handleDeleteSkill(skill.id)} style={{ color: '#ef4444', fontWeight: '600', fontSize: '0.9rem', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}>Hapus</button>
                     </div>
@@ -555,7 +578,7 @@ export function Dashboard() {
                       <input type="date" value={expEndDate} onChange={e => setExpEndDate(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                     </div>
                     <textarea placeholder="Deskripsi singkat..." value={expDescription} onChange={e => setExpDescription(e.target.value)} rows={3} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}></textarea>
-                    <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#2563eb', color: 'white', fontWeight: '600', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>+ Simpan</button>
+                    <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#334155', color: 'white', fontWeight: '600', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>+ Simpan</button>
                   </form>
                 </div>
 
@@ -563,7 +586,7 @@ export function Dashboard() {
                   {profile.experiences.length === 0 ? <p style={{ color: '#64748b' }}>Belum ada pengalaman.</p> : profile.experiences.map(exp => (
                     <div key={exp.id} style={{ position: 'relative', backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                       <h4 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0f172a' }}>{exp.title}</h4>
-                      <p style={{ color: '#2563eb', fontWeight: '600', marginBottom: '6px' }}>{exp.company}</p>
+                      <p style={{ color: '#0f172a', fontWeight: '600', marginBottom: '6px' }}>{exp.company}</p>
                       <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '16px' }}>{exp.start_date} — {exp.end_date || 'Sekarang'}</p>
                       {exp.description && <p style={{ fontSize: '1rem', color: '#334155', lineHeight: '1.6', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px' }}>{exp.description}</p>}
                       <button onClick={() => handleDeleteExperience(exp.id)} style={{ position: 'absolute', top: '24px', right: '24px', color: '#ef4444', background: 'none', border: 'none', fontWeight: '600', cursor: 'pointer' }}>Hapus</button>
